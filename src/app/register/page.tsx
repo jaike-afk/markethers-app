@@ -179,6 +179,7 @@ function RegisterForm() {
         businessId: newBiz.id,
         businessName: newBiz.name,
         planId: selectedPlan,
+        role: 'client' as const,
         createdAt: new Date().toISOString(),
       };
 

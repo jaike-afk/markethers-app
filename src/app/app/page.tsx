@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { INITIAL_BUSINESSES, INITIAL_CUSTOMERS, INITIAL_MENU_ITEMS, INITIAL_TRANSACTIONS, INITIAL_SALES } from '@/lib/store';
 import { Business, Customer, MenuItem, StampTransaction, SaleRecord } from '@/types';
-import { getCurrentUser, logoutUser, UserAccount } from '@/lib/auth';
+import { getCurrentUser, logoutUser, UserAccount, isOwnerUser } from '@/lib/auth';
 import { AppleWalletCard } from '@/components/AppleWalletCard';
 import { CameraScanner } from '@/components/CameraScanner';
 import { CounterQrModal } from '@/components/CounterQrModal';
@@ -62,15 +62,27 @@ import {
   Filter,
   ArrowUpRight,
   Wallet,
+  Printer,
 } from 'lucide-react';
 
 export default function MarkethersAppPortal() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
   const [authChecking, setAuthChecking] = useState(true);
+  const isOwner = isOwnerUser(currentUser);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const [businesses, setBusinesses] = useState<Business[]>(INITIAL_BUSINESSES);
   const [selectedBusinessId, setSelectedBusinessId] = useState<string>(INITIAL_BUSINESSES[0].id);
+
+  const handleCopyStoreLink = () => {
+    if (typeof window !== 'undefined') {
+      const url = `${window.location.origin}/${business.slug}`;
+      navigator.clipboard.writeText(url);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 3000);
+    }
+  };
 
   // Active navigation section
   const [activeSection, setActiveSection] = useState<
@@ -814,7 +826,7 @@ Contacto y Soporte: soporte@markethers.com
                 </h2>
               </div>
               <span className="text-[11px] text-slate-400 font-medium block">
-                Panel de control
+                {isOwner ? '👑 Modo Dueño Master' : 'Panel de control'}
               </span>
             </div>
           </div>
@@ -833,7 +845,7 @@ Contacto y Soporte: soporte@markethers.com
               }`}
             >
               <LayoutDashboard className="w-4 h-4 stroke-[2.5]" />
-              <span>Panel</span>
+              <span>{isOwner ? 'Panel Ejecutivo Dueño' : 'Panel de mi Negocio'}</span>
             </button>
           </div>
 
@@ -853,25 +865,28 @@ Contacto y Soporte: soporte@markethers.com
 
             {fidelizacionOpen && (
               <div className="space-y-0.5 mt-1">
-                <button
-                  onClick={() => {
-                    setActiveSection('ventas');
-                    setMobileSidebarOpen(false);
-                  }}
-                  className={`w-full py-2 px-3 rounded-xl flex items-center justify-between text-xs font-medium transition-colors ${
-                    activeSection === 'ventas'
-                      ? 'bg-slate-800 text-white font-bold'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-900/40'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Receipt className="w-4 h-4 text-emerald-400" />
-                    <span>Ventas & Movimientos</span>
-                  </div>
-                  <span className="text-[10px] font-bold bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded">
-                    {sales.length}
-                  </span>
-                </button>
+                {/* Ventas & Movimientos ledger ONLY for Master Owner */}
+                {isOwner && (
+                  <button
+                    onClick={() => {
+                      setActiveSection('ventas');
+                      setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full py-2 px-3 rounded-xl flex items-center justify-between text-xs font-medium transition-colors ${
+                      activeSection === 'ventas'
+                        ? 'bg-slate-800 text-white font-bold'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-900/40'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Receipt className="w-4 h-4 text-emerald-400" />
+                      <span>Ventas & Movimientos</span>
+                    </div>
+                    <span className="text-[10px] font-bold bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded">
+                      {sales.length}
+                    </span>
+                  </button>
+                )}
 
                 <button
                   onClick={() => {
@@ -886,7 +901,7 @@ Contacto y Soporte: soporte@markethers.com
                 >
                   <div className="flex items-center gap-2.5">
                     <Users className="w-4 h-4 text-blue-400" />
-                    <span>Base de Clientes (CRM)</span>
+                    <span>{isOwner ? 'Base de Clientes (CRM)' : 'Mis Comensales (Clientes)'}</span>
                   </div>
                   <span className="text-[10px] font-bold bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded">
                     {customers.length}
@@ -1197,7 +1212,7 @@ Contacto y Soporte: soporte@markethers.com
 
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-black text-slate-900 tracking-tight">
-                Panel
+                {isOwner ? 'Dashboard Ejecutivo Dueño' : 'Panel de Control'}
               </h1>
               <span className="text-xs text-slate-400 font-medium">
                 / {todayFormatted}
@@ -1207,7 +1222,7 @@ Contacto y Soporte: soporte@markethers.com
 
           <div className="flex items-center gap-3">
             {/* Business switcher / Active business badge */}
-            {currentUser?.email.toLowerCase() === 'jaikeromero@gmail.com' ? (
+            {isOwner ? (
               <select
                 value={selectedBusinessId}
                 onChange={e => setSelectedBusinessId(e.target.value)}
@@ -1353,19 +1368,25 @@ Contacto y Soporte: soporte@markethers.com
                 </div>
               )}
 
-              {/* EXECUTIVE DASHBOARD CONTROLS & PERIOD SELECTOR */}
-              <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
-                      Dashboard Ejecutivo de Ventas & Clientes
-                    </h2>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Métricas de ingresos, base de datos de comensales y movimientos en tiempo real para <strong>{business.name}</strong>.
-                  </p>
-                </div>
+              {/* IF OWNER: Executive Revenue & Audit Dashboard. IF CLIENT: Dedicated Store Operations Panel */}
+              {isOwner ? (
+                <>
+                  {/* EXECUTIVE DASHBOARD CONTROLS & PERIOD SELECTOR (SOLO PARA DUEÑO) */}
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
+                          <span>Dashboard Ejecutivo de Ventas & Clientes</span>
+                          <span className="text-[10px] bg-amber-100 text-amber-800 font-extrabold px-2 py-0.5 rounded-full uppercase">
+                            Exclusivo Dueño
+                          </span>
+                        </h2>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Métricas de ingresos, base de datos de comensales y movimientos en tiempo real para <strong>{business.name}</strong>.
+                      </p>
+                    </div>
 
                 <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
                   {/* Period filter buttons */}
@@ -1863,13 +1884,383 @@ Contacto y Soporte: soporte@markethers.com
                   </div>
                 </div>
               </div>
+                </>
+              ) : (
+                /* ========================================================= */
+                /* CLIENT / MERCHANT PANEL VIEW (EXCLUSIVO PARA CLIENTES)    */
+                /* ========================================================= */
+                <div className="space-y-6">
+                  {/* Hero Store Status & Direct InfoLink Access */}
+                  <div className="bg-gradient-to-r from-[#0a111a] via-[#101b2a] to-[#0a111a] border border-slate-800 text-white rounded-3xl p-6 sm:p-7 shadow-xl relative overflow-hidden">
+                    <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                          <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                            Panel de Tu Negocio
+                          </span>
+                          <span className="text-[10px] bg-emerald-500/10 text-emerald-300 font-extrabold px-2 py-0.5 rounded-full border border-emerald-500/20">
+                            Activo
+                          </span>
+                        </div>
+                        <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+                          {business.name}
+                        </h2>
+                        <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
+                          Bienvenido, <strong>{currentUser?.name || 'Comerciante'}</strong>. Monitorea tus comensales con tarjeta Wallet, visitas validadas y tu carta digital.
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto">
+                        <Link
+                          href={`/${business.slug}`}
+                          target="_blank"
+                          className="px-4 py-2.5 bg-[#22c55e] hover:bg-emerald-600 text-black font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02]"
+                        >
+                          <ExternalLink className="w-4 h-4 stroke-[2.5]" />
+                          <span>Ver Mi Mini-Sitio en Vivo</span>
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={handleCopyStoreLink}
+                          className="px-4 py-2.5 bg-slate-800/90 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 border border-slate-700 transition-colors"
+                        >
+                          {copiedLink ? (
+                            <>
+                              <Check className="w-4 h-4 text-emerald-400 stroke-[3]" />
+                              <span className="text-emerald-400">¡Link Copiado!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Share2 className="w-4 h-4 text-slate-400" />
+                              <span>Copiar Link Bio</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Operational Metrics (Fidelización & Menú) */}
+                  <div>
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2 px-1">
+                      Métricas de tu Negocio & Clientes
+                    </span>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+                      {/* 1: Total Clientes */}
+                      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                        <div className="flex items-center gap-1.5 text-slate-500">
+                          <Users className="w-3.5 h-3.5" />
+                          <span className="text-[10px] font-bold uppercase tracking-wider">Clientes</span>
+                        </div>
+                        <div className="text-2xl font-black text-slate-900 mt-1.5">
+                          {customers.length}
+                        </div>
+                        <span className="text-[10px] text-emerald-600 font-bold mt-1 block">
+                          Base de datos activa
+                        </span>
+                      </div>
+
+                      {/* 2: Apple Wallet */}
+                      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                        <div className="flex items-center gap-1.5 text-slate-800">
+                          <CreditCard className="w-3.5 h-3.5" />
+                          <span className="text-[10px] font-bold uppercase tracking-wider">Apple Wallet</span>
+                        </div>
+                        <div className="text-2xl font-black text-slate-900 mt-1.5">
+                          {customers.filter(c => c.walletPassType === 'apple').length}
+                        </div>
+                        <span className="text-[10px] text-slate-400 mt-1 block">
+                          Pases en iPhone
+                        </span>
+                      </div>
+
+                      {/* 3: Google Wallet */}
+                      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                        <div className="flex items-center gap-1.5 text-slate-800">
+                          <Smartphone className="w-3.5 h-3.5" />
+                          <span className="text-[10px] font-bold uppercase tracking-wider">Google Wallet</span>
+                        </div>
+                        <div className="text-2xl font-black text-slate-900 mt-1.5">
+                          {customers.filter(c => c.walletPassType === 'google').length}
+                        </div>
+                        <span className="text-[10px] text-slate-400 mt-1 block">
+                          Pases en Android
+                        </span>
+                      </div>
+
+                      {/* 4: Sellos Totales */}
+                      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                        <div className="flex items-center gap-1.5 text-emerald-600">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span className="text-[10px] font-bold uppercase tracking-wider">Sellos Dados</span>
+                        </div>
+                        <div className="text-2xl font-black text-emerald-600 mt-1.5">
+                          {customers.reduce((acc, c) => acc + c.currentStamps, 0)}
+                        </div>
+                        <span className="text-[10px] text-slate-400 mt-1 block">
+                          Acumulados
+                        </span>
+                      </div>
+
+                      {/* 5: Premios Canjeados */}
+                      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                        <div className="flex items-center gap-1.5 text-amber-600">
+                          <Gift className="w-3.5 h-3.5" />
+                          <span className="text-[10px] font-bold uppercase tracking-wider">Premios</span>
+                        </div>
+                        <div className="text-2xl font-black text-amber-600 mt-1.5">
+                          {customers.reduce((acc, c) => acc + (c.rewardsRedeemed || 0), 0)}
+                        </div>
+                        <span className="text-[10px] text-slate-400 mt-1 block">
+                          Canjeados
+                        </span>
+                      </div>
+
+                      {/* 6: Google Reviews */}
+                      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                        <div className="flex items-center gap-1.5 text-amber-500">
+                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                          <span className="text-[10px] font-bold uppercase tracking-wider">Google Rating</span>
+                        </div>
+                        <div className="text-2xl font-black text-slate-900 mt-1.5">
+                          {business.googleReviews.googleRating} ⭐
+                        </div>
+                        <span className="text-[10px] text-slate-400 mt-1 block">
+                          {business.googleReviews.totalReviews} reseñas
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Interactive Quick Shortcuts for Merchant */}
+                  <div>
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2 px-1">
+                      Herramientas Operativas de tu Local
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {/* Action 1: Tarjetas Wallet */}
+                      <button
+                        type="button"
+                        onClick={() => setActiveSection('tarjetas')}
+                        className="p-5 bg-white border border-slate-200/90 rounded-2xl hover:border-emerald-500 hover:shadow-md transition-all text-left group cursor-pointer"
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                          <CreditCard className="w-5 h-5 stroke-[2.5]" />
+                        </div>
+                        <h4 className="font-extrabold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors">
+                          Diseñar Tarjeta Wallet
+                        </h4>
+                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                          Premio: <strong>{business.loyaltyConfig.rewardTitle}</strong> ({business.loyaltyConfig.totalStamps} sellos).
+                        </p>
+                        <span className="mt-3 text-xs font-bold text-emerald-600 flex items-center gap-1">
+                          <span>Editar tarjeta</span>
+                          <span>→</span>
+                        </span>
+                      </button>
+
+                      {/* Action 2: Escáner de Caja */}
+                      <button
+                        type="button"
+                        onClick={() => setActiveSection('escaner')}
+                        className="p-5 bg-white border border-slate-200/90 rounded-2xl hover:border-blue-500 hover:shadow-md transition-all text-left group cursor-pointer"
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                          <QrCode className="w-5 h-5 stroke-[2.5]" />
+                        </div>
+                        <h4 className="font-extrabold text-sm text-slate-900 group-hover:text-blue-700 transition-colors">
+                          Escáner de Sellos en Caja
+                        </h4>
+                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                          Usa la cámara de tu celular o tablet para sellar tarjetas y validar canjes al instante.
+                        </p>
+                        <span className="mt-3 text-xs font-bold text-blue-600 flex items-center gap-1">
+                          <span>Abrir escáner</span>
+                          <span>→</span>
+                        </span>
+                      </button>
+
+                      {/* Action 3: Menú Digital */}
+                      <button
+                        type="button"
+                        onClick={() => setActiveSection('menu')}
+                        className="p-5 bg-white border border-slate-200/90 rounded-2xl hover:border-amber-500 hover:shadow-md transition-all text-left group cursor-pointer"
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                          <Utensils className="w-5 h-5 stroke-[2.5]" />
+                        </div>
+                        <h4 className="font-extrabold text-sm text-slate-900 group-hover:text-amber-700 transition-colors">
+                          Gestionar Menú Digital
+                        </h4>
+                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                          {menuItems.length} platillos en tu carta. Sube fotos, videos cortos y actualiza precios.
+                        </p>
+                        <span className="mt-3 text-xs font-bold text-amber-600 flex items-center gap-1">
+                          <span>Editar carta</span>
+                          <span>→</span>
+                        </span>
+                      </button>
+
+                      {/* Action 4: Stands QR */}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenQr('counter')}
+                        className="p-5 bg-white border border-slate-200/90 rounded-2xl hover:border-purple-500 hover:shadow-md transition-all text-left group cursor-pointer"
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                          <Printer className="w-5 h-5 stroke-[2.5]" />
+                        </div>
+                        <h4 className="font-extrabold text-sm text-slate-900 group-hover:text-purple-700 transition-colors">
+                          Stands QR para Mesas
+                        </h4>
+                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                          Descarga e imprime los diseños en alta resolución para colocar en mesas y mostrador.
+                        </p>
+                        <span className="mt-3 text-xs font-bold text-purple-600 flex items-center gap-1">
+                          <span>Ver stands QR</span>
+                          <span>→</span>
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Customer Feed & Menu Overview */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                    {/* Clientes recientes con tarjeta activa */}
+                    <div className="lg:col-span-7 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                              <Users className="w-4 h-4 text-emerald-600" />
+                              <span>Comensales con Tarjeta Activa</span>
+                            </h3>
+                            <p className="text-[11px] text-slate-400">
+                              Clientes que han instalado tu tarjeta en Apple Wallet o Google Wallet.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setActiveSection('clientes')}
+                            className="text-xs font-bold text-emerald-600 hover:underline"
+                          >
+                            Ver todos ({customers.length}) →
+                          </button>
+                        </div>
+
+                        <div className="space-y-2.5">
+                          {customers.length === 0 ? (
+                            <div className="p-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                              <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                              <p className="text-xs font-bold text-slate-700">Aún no hay clientes registrados</p>
+                              <p className="text-[11px] text-slate-400 mt-0.5">
+                                Aparecerán aquí en cuanto agreguen tu tarjeta a su celular.
+                              </p>
+                            </div>
+                          ) : (
+                            customers.slice(0, 4).map(c => (
+                              <div key={c.id} className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-500 text-zinc-950 font-black text-[10px] flex items-center justify-center shrink-0">
+                                    {c.name.charAt(0)}
+                                  </div>
+                                  <div>
+                                    <span className="font-bold text-slate-900 block">{c.name}</span>
+                                    <span className="text-[10px] text-slate-400 font-mono block">{c.phone}</span>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <span className="font-extrabold text-emerald-600 text-xs block">
+                                    {c.currentStamps}/{business.loyaltyConfig.totalStamps} sellos
+                                  </span>
+                                  <span className="text-[10px] text-slate-400">
+                                    {c.walletPassType === 'google' ? 'Google Wallet' : 'Apple Wallet'}
+                                  </span>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="pt-3 border-t border-slate-100 mt-4 flex items-center justify-between text-xs">
+                        <button
+                          type="button"
+                          onClick={() => setIsNewCustomerModalOpen(true)}
+                          className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>+ Registrar comensal manualmente</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Platillos en Carta */}
+                    <div className="lg:col-span-5 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+                            <Utensils className="w-4 h-4 text-amber-500" />
+                            <span>Platillos en Carta Digital</span>
+                          </h3>
+                          <button
+                            type="button"
+                            onClick={() => setActiveSection('menu')}
+                            className="text-xs font-bold text-emerald-600 hover:underline"
+                          >
+                            Gestionar carta
+                          </button>
+                        </div>
+
+                        <div className="space-y-2.5">
+                          {menuItems.slice(0, 4).map((item) => (
+                            <div key={item.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
+                              <div className="min-w-0">
+                                <span className="font-bold text-slate-900 block truncate">{item.name}</span>
+                                <span className="text-[10px] text-slate-500 block">{item.category}</span>
+                              </div>
+                              <span className="font-black text-slate-900 shrink-0 ml-2">
+                                ${item.price}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t border-slate-100 mt-4 flex items-center justify-between text-xs">
+                        <span className="text-slate-500">Total en tu menú:</span>
+                        <span className="font-bold text-slate-900">{menuItems.length} platillos</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           {/* ========================================================= */}
-          {/* VIEW: VENTAS & MOVIMIENTOS (LEDGER FINANCIERO)             */}
+          {/* VIEW: VENTAS & MOVIMIENTOS (LEDGER FINANCIERO - SOLO DUEÑO)*/}
           {/* ========================================================= */}
           {activeSection === 'ventas' && (
+            !isOwner ? (
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-12 text-center shadow-sm max-w-xl mx-auto my-12 space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto text-xl font-bold">
+                  🔒
+                </div>
+                <h3 className="font-black text-lg text-slate-900">Módulo Reservado para el Dueño</h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  El libro contable de ventas ejecutivas y auditoría central de cobros es exclusivo para la administración del Propietario de Markethers.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setActiveSection('panel')}
+                  className="mt-4 px-4 py-2 bg-[#22c55e] text-black font-extrabold text-xs rounded-xl shadow-md cursor-pointer"
+                >
+                  Volver a mi Panel
+                </button>
+              </div>
+            ) : (
             <div className="space-y-6">
               {/* Header card with summary & stats */}
               <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm">
@@ -2101,6 +2492,7 @@ Contacto y Soporte: soporte@markethers.com
                 </div>
               </div>
             </div>
+            )
           )}
 
           {/* ========================================================= */}

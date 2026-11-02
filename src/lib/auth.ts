@@ -6,6 +6,7 @@ export interface UserAccount {
   businessId: string;
   businessName: string;
   planId: string;
+  role?: 'owner' | 'client';
   createdAt: string;
 }
 
@@ -15,12 +16,18 @@ export const DEFAULT_USERS: UserAccount[] = [
     email: 'jaikeromero@gmail.com',
     password: 'password123',
     name: 'Jaike Romero',
+    role: 'owner',
     businessId: 'biz_habibi_0',
     businessName: 'Habibi Bar Cantina',
     planId: 'pro',
     createdAt: '2026-01-01T00:00:00Z',
   },
 ];
+
+export function isOwnerUser(user: UserAccount | null | undefined): boolean {
+  if (!user) return false;
+  return user.role === 'owner' || user.email.toLowerCase() === 'jaikeromero@gmail.com';
+}
 
 const STORAGE_USERS_KEY = 'markethers_registered_users';
 const STORAGE_CURRENT_USER_KEY = 'markethers_current_user';
@@ -52,10 +59,14 @@ export function saveUser(user: UserAccount): { success: boolean; error?: string 
     }
     const raw = localStorage.getItem(STORAGE_USERS_KEY);
     const stored: UserAccount[] = raw ? JSON.parse(raw) : [];
-    stored.push(user);
+    const formattedUser: UserAccount = {
+      ...user,
+      role: user.role || (user.email.toLowerCase() === 'jaikeromero@gmail.com' ? 'owner' : 'client'),
+    };
+    stored.push(formattedUser);
     localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(stored));
     // Set active session
-    setCurrentUser(user);
+    setCurrentUser(formattedUser);
     return { success: true };
   } catch {
     return { success: false, error: 'Error al registrar el usuario en el almacenamiento local.' };
@@ -88,15 +99,25 @@ export function authenticateUser(email: string, password: string): { success: bo
     };
   }
 
-  setCurrentUser(user);
-  return { success: true, user };
+  const sessionUser: UserAccount = {
+    ...user,
+    role: user.role || (user.email.toLowerCase() === 'jaikeromero@gmail.com' ? 'owner' : 'client'),
+  };
+
+  setCurrentUser(sessionUser);
+  return { success: true, user: sessionUser };
 }
 
 export function getCurrentUser(): UserAccount | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw = localStorage.getItem(STORAGE_CURRENT_USER_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const user: UserAccount = JSON.parse(raw);
+    if (!user.role) {
+      user.role = user.email.toLowerCase() === 'jaikeromero@gmail.com' ? 'owner' : 'client';
+    }
+    return user;
   } catch {
     return null;
   }
