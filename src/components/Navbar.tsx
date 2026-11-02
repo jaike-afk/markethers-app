@@ -12,6 +12,7 @@ import {
   Menu,
   X,
   CreditCard,
+  Smartphone,
 } from 'lucide-react';
 
 export function Navbar() {
@@ -83,6 +84,18 @@ export function Navbar() {
           </div>
 
           <Link
+            href="/app"
+            className={`px-3 py-2 rounded-xl flex items-center gap-1.5 transition-colors ${
+              pathname === '/app'
+                ? 'bg-emerald-500/10 text-emerald-400 font-semibold'
+                : 'text-zinc-300 hover:text-white hover:bg-zinc-900'
+            }`}
+          >
+            <Smartphone className="w-4 h-4 text-emerald-400" />
+            <span>Clubify App Móvil (/app)</span>
+          </Link>
+
+          <Link
             href="/scanner"
             className={`px-3 py-2 rounded-xl flex items-center gap-1.5 transition-colors ${
               pathname === '/scanner'
@@ -148,6 +161,15 @@ export function Navbar() {
           </div>
 
           <div className="pt-2 border-t border-zinc-900 flex flex-col gap-2">
+            <Link
+              href="/app"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 text-sm font-bold border border-emerald-500/20"
+            >
+              <Smartphone className="w-4 h-4 text-emerald-400" />
+              <span>Abrir App Móvil (/app)</span>
+            </Link>
+
             <Link
               href="/scanner"
               onClick={() => setMobileMenuOpen(false)}
