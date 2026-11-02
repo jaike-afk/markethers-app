@@ -16,6 +16,7 @@ import {
   CreditCard,
   Smartphone,
   Globe,
+  Zap,
 } from 'lucide-react';
 
 export function Navbar() {
@@ -122,6 +123,14 @@ export function Navbar() {
           </Link>
 
           <Link
+            href="/#precios"
+            className="px-3 py-2 rounded-xl flex items-center gap-1.5 text-xs font-semibold text-zinc-300 hover:text-white hover:bg-zinc-900 transition-colors"
+          >
+            <Zap className="w-4 h-4 text-amber-400" />
+            <span>{t.pricingNav}</span>
+          </Link>
+
+          <Link
             href="/dashboard"
             className={`px-3 py-2 rounded-xl flex items-center gap-1.5 text-xs font-semibold transition-colors ${
               pathname === '/dashboard'
@@ -165,11 +174,18 @@ export function Navbar() {
           </div>
 
           <Link
-            href="/aroma-cafe"
+            href="/login"
+            className="text-xs font-semibold text-zinc-300 hover:text-white px-2.5 py-1.5 transition-colors"
+          >
+            {activeLang === 'es' ? 'Iniciar Sesión' : 'Log In'}
+          </Link>
+
+          <Link
+            href="/register"
             className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-lime-400 hover:from-emerald-400 hover:to-lime-300 text-zinc-950 font-black text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
-            <CreditCard className="w-3.5 h-3.5" />
-            <span>{t.tryCustomerCard}</span>
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>{activeLang === 'es' ? 'Empezar Gratis' : 'Start Free'}</span>
           </Link>
         </div>
 

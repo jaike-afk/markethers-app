@@ -31,6 +31,7 @@ import {
 interface MenuManagerProps {
   business: Business;
   menuItems: MenuItem[];
+  initialTab?: 'items' | 'pdf';
   onUpdateBusiness?: (updated: Partial<Business>) => void;
   onUpdateMenuItems?: (items: MenuItem[]) => void;
 }
@@ -38,11 +39,12 @@ interface MenuManagerProps {
 export function MenuManager({
   business,
   menuItems: initialMenuItems,
+  initialTab = 'items',
   onUpdateBusiness,
   onUpdateMenuItems,
 }: MenuManagerProps) {
   // Navigation between the two main ways of managing the menu
-  const [activeMode, setActiveMode] = useState<'items' | 'pdf'>('items');
+  const [activeMode, setActiveMode] = useState<'items' | 'pdf'>(initialTab);
 
   // Menu items state
   const [items, setItems] = useState<MenuItem[]>(initialMenuItems);

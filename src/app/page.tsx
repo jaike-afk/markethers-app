@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { AppleWalletCard } from '@/components/AppleWalletCard';
 import { GoogleReviewCard } from '@/components/GoogleReviewCard';
 import { DigitalMenuShowcase } from '@/components/DigitalMenuShowcase';
+import { InfoLinkSection } from '@/components/InfoLinkSection';
+import { PricingSection } from '@/components/PricingSection';
+import { TestimonialsSection } from '@/components/TestimonialsSection';
 import { INITIAL_BUSINESSES, INITIAL_CUSTOMERS } from '@/lib/store';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
@@ -234,12 +237,39 @@ export default function HomePage() {
             />
           </div>
         </div>
+
+        {/* Social Proof Stats Bar */}
+        <div className="mt-12 max-w-4xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-5 sm:p-6 bg-zinc-900/60 border border-zinc-800 rounded-3xl text-center backdrop-blur-md">
+            <div>
+              <div className="text-2xl sm:text-3xl font-black text-white">{t.statsBar.activeBusinesses}</div>
+              <div className="text-xs text-zinc-400 mt-1">{t.statsBar.activeBusinessesLabel}</div>
+            </div>
+            <div>
+              <div className="text-2xl sm:text-3xl font-black text-amber-400">{t.statsBar.rating}</div>
+              <div className="text-xs text-zinc-400 mt-1">{t.statsBar.ratingLabel}</div>
+            </div>
+            <div>
+              <div className="text-2xl sm:text-3xl font-black text-emerald-400">{t.statsBar.walletsCreated}</div>
+              <div className="text-xs text-zinc-400 mt-1">{t.statsBar.walletsCreatedLabel}</div>
+            </div>
+            <div>
+              <div className="text-2xl sm:text-3xl font-black text-white">{t.statsBar.zeroCommission}</div>
+              <div className="text-xs text-zinc-400 mt-1">{t.statsBar.zeroCommissionLabel}</div>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* ========================================================= */}
       {/* 2. DIGITAL MENU SPOTLIGHT: UPLOAD OR BUILD IN PLATFORM   */}
       {/* ========================================================= */}
       <DigitalMenuShowcase />
+
+      {/* ========================================================= */}
+      {/* 2.5 INFOLINK ALL-IN-ONE ECOSYSTEM (LINK-IN-BIO + QR)     */}
+      {/* ========================================================= */}
+      <InfoLinkSection />
 
       {/* ========================================================= */}
       {/* 3. GOOGLE REVIEWS 5-STAR SMART FILTER SPOTLIGHT           */}
@@ -300,6 +330,11 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ========================================================= */}
+      {/* 3.5 REAL-WORLD TESTIMONIALS & RESULTS                     */}
+      {/* ========================================================= */}
+      <TestimonialsSection />
 
       {/* ========================================================= */}
       {/* 4. THE BIG PROBLEM VS THE MODERN SOLUTION                 */}
@@ -569,6 +604,11 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ========================================================= */}
+      {/* 6.5 TRANSPARENT PRICING & GUARANTEE                       */}
+      {/* ========================================================= */}
+      <PricingSection />
 
       {/* ========================================================= */}
       {/* 7. INTERACTIVE ROI CALCULATOR                             */}

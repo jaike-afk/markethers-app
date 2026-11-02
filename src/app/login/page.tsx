@@ -1,0 +1,115 @@
+'use client';
+
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Sparkles, Mail, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
+
+export const instant = false;
+
+export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState('jaikeromero@gmail.com');
+  const [password, setPassword] = useState('••••••••••••');
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      router.push('/app');
+    }, 700);
+  };
+
+  return (
+    <div className="min-h-screen bg-zinc-950 text-white font-sans antialiased flex flex-col justify-between py-12 px-4 sm:px-6">
+      {/* Brand Header */}
+      <div className="max-w-md w-full mx-auto">
+        <Link href="/" className="flex items-center justify-center gap-2.5 mb-8">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-400 via-teal-400 to-lime-400 flex items-center justify-center text-zinc-950 font-black shadow-lg shadow-emerald-500/20">
+            <Sparkles className="w-6 h-6 text-zinc-950 fill-zinc-950" />
+          </div>
+          <div>
+            <span className="font-extrabold text-xl tracking-tight text-white block">
+              Markethers
+            </span>
+            <span className="text-[10px] text-zinc-400 -mt-1 block">
+              Panel de Control del Negocio
+            </span>
+          </div>
+        </Link>
+
+        {/* Card */}
+        <div className="bg-zinc-900/80 border border-zinc-800 rounded-3xl p-8 shadow-2xl space-y-6">
+          <div className="text-center space-y-1">
+            <h1 className="text-2xl font-black text-white">Inicia sesión en tu cuenta</h1>
+            <p className="text-xs text-zinc-400">
+              Accede a tu panel para gestionar tu menú, tarjetas Wallet y clientes.
+            </p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="text-xs font-bold text-zinc-300 block mb-1">
+                Correo Electrónico
+              </label>
+              <div className="relative">
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white outline-none focus:border-emerald-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-bold text-zinc-300">Contraseña</label>
+                <a href="#" className="text-[11px] text-emerald-400 hover:underline">
+                  ¿Olvidaste tu contraseña?
+                </a>
+              </div>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 bg-[#22c55e] hover:bg-emerald-600 text-black font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 transition-all hover:scale-[1.01]"
+            >
+              {loading ? (
+                <span>Iniciando sesión...</span>
+              ) : (
+                <>
+                  <span>Entrar a mi Dashboard</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="pt-4 border-t border-zinc-800 text-center text-xs text-zinc-400">
+            ¿Aún no tienes cuenta para tu negocio?{' '}
+            <Link href="/register" className="text-emerald-400 font-bold hover:underline">
+              Empieza gratis 14 días
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="text-center text-xs text-zinc-500">
+        Markethers SaaS • Sistema de fidelización y menús digitales sin comisiones
+      </div>
+    </div>
+  );
+}

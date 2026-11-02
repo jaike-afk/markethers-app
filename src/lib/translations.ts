@@ -1,3 +1,25 @@
+export interface Testimonial {
+  name: string;
+  role: string;
+  business: string;
+  avatar: string;
+  quote: string;
+  metric: string;
+  stars: number;
+}
+
+export interface PricingPlan {
+  id: string;
+  name: string;
+  badge?: string;
+  description: string;
+  monthlyPrice: number;
+  annualPrice: number;
+  features: string[];
+  cta: string;
+  popular?: boolean;
+}
+
 export interface Translations {
   nav: {
     brandSubtitle: string;
@@ -8,6 +30,7 @@ export interface Translations {
     merchantPanel: string;
     tryCustomerCard: string;
     langSelect: string;
+    pricingNav: string;
   };
   hero: {
     badge: string;
@@ -25,6 +48,16 @@ export interface Translations {
     simSubtitle: string;
     simButton: string;
     simRewardUnlocked: string;
+  };
+  statsBar: {
+    activeBusinesses: string;
+    activeBusinessesLabel: string;
+    rating: string;
+    ratingLabel: string;
+    walletsCreated: string;
+    walletsCreatedLabel: string;
+    zeroCommission: string;
+    zeroCommissionLabel: string;
   };
   menuSpotlight: {
     tag: string;
@@ -62,6 +95,22 @@ export interface Translations {
     whatsappTitle: string;
     whatsappDesc: string;
     whatsappButton: string;
+  };
+  infoLink: {
+    tag: string;
+    headline: string;
+    headlineHighlight: string;
+    subtitle: string;
+    feature1Title: string;
+    feature1Desc: string;
+    feature2Title: string;
+    feature2Desc: string;
+    feature3Title: string;
+    feature3Desc: string;
+    feature4Title: string;
+    feature4Desc: string;
+    previewTitle: string;
+    previewBioDesc: string;
   };
   pillars: {
     tag: string;
@@ -158,6 +207,30 @@ export interface Translations {
     row6App: string;
     row6Markethers: string;
   };
+  testimonials: {
+    tag: string;
+    headline: string;
+    headlineHighlight: string;
+    subtitle: string;
+    items: Testimonial[];
+  };
+  pricing: {
+    tag: string;
+    headline: string;
+    headlineHighlight: string;
+    subtitle: string;
+    monthly: string;
+    annual: string;
+    annualDiscount: string;
+    billedAnnually: string;
+    billedMonthly: string;
+    guaranteeTitle: string;
+    guaranteeDesc: string;
+    trust1: string;
+    trust2: string;
+    trust3: string;
+    plans: PricingPlan[];
+  };
   roi: {
     tag: string;
     headline: string;
@@ -208,6 +281,7 @@ export const translations: Record<'es' | 'en', Translations> = {
       merchantPanel: 'Panel de Menú',
       tryCustomerCard: 'Probar Tarjeta Cliente',
       langSelect: 'Idioma',
+      pricingNav: 'Planes & Precios',
     },
     hero: {
       badge: 'El Sistema Operativo y Club de Clientes para Negocios Locales',
@@ -215,24 +289,34 @@ export const translations: Record<'es' | 'en', Translations> = {
       headlineHighlight: 'Apple Wallet & Google Wallet',
       headlinePart2: '+ Menú Digital sin apps que descargar.',
       subtitle:
-        'Reemplaza las tarjetas de cartón y menús impresos obsoletos por una suite moderna para tu negocio: tarjetas en el teléfono de tus clientes, menú digital ultra fácil (sube tu archivo o créalo aquí) y filtro inteligente de reseñas de Google.',
+        'Vende directo por WhatsApp, llena tus mesas con tarjetas de sellos en el celular de tus clientes y multiplica tus reseñas de 5 estrellas en Google Maps. Todo en un solo lugar y listo en 2 minutos.',
       ctaPrimary: 'Explorar Panel (/app)',
       ctaSecondary: 'Probar como Cliente (Demo)',
       ctaScanner: 'Escáner de Cajero',
       check1: 'Sin apps para el cliente (100% nativo)',
-      check2: 'Sube tu menú o créalo en 2 minutos',
-      check3: 'Compatible con iPhone y Android',
+      check2: 'Sube tu PDF o crea en 2 minutos',
+      check3: '0% comisiones por tus pedidos',
       simTitle: 'Simulador interactivo en tiempo real',
       simSubtitle: 'Haz clic para simular cómo un cliente suma sellos en tu cafetería o negocio:',
       simButton: 'Simular compra (+1 Sello)',
       simRewardUnlocked: '¡Premio desbloqueado! 🎉',
+    },
+    statsBar: {
+      activeBusinesses: '+180',
+      activeBusinessesLabel: 'Negocios Locales Activos',
+      rating: '4.9 / 5.0 ⭐',
+      ratingLabel: 'Satisfacción Comprobada',
+      walletsCreated: '+125,000',
+      walletsCreatedLabel: 'Pases Guardados en Wallets',
+      zeroCommission: '0%',
+      zeroCommissionLabel: 'Comisión en Tus Pedidos',
     },
     menuSpotlight: {
       tag: '⭐ Estrella del Producto: Menú Digital',
       headline: 'Tu Menú Digital Listo en Minutos:',
       headlineHighlight: 'Tú Eliges Cómo Tenerlo',
       description:
-        'Diseñado para ser sumamente fácil y amigable. Si ya tienes tu menú en PDF, foto o papel, súbelo directamente. Si prefieres crearlo desde cero, nuestro editor visual te toma menos de 2 minutos.',
+        'Diseñado para ser sumamente fácil y amigable. Si ya tienes tu menú en PDF, foto o papel, súbelo directamente. Si prefieres crearlo desde cero, nuestro editor visual te toma menos de 2 minutos e incluye fotos y videos.',
       tabUpload: '📄 Opción 1: Subir mi Menú Existente',
       tabPlatform: '⚡ Opción 2: Crearlo en la Plataforma',
       uploadTitle: '¿Ya tienes tu carta impresa o en PDF? Solo súbela.',
@@ -251,9 +335,9 @@ export const translations: Record<'es' | 'en', Translations> = {
       uploadSimSuccessMsg: 'Detectamos 16 productos en 4 categorías (Cafés, Desayunos, Postres, Bebidas). ¡Ya está activo en tus códigos QR!',
       platformTitle: 'Editor Visual Súper Fácil e Intuitivo',
       platformSubtitle:
-        'Crea tu catálogo producto por producto sin conocimientos técnicos. Actualiza precios en un segundo.',
+        'Crea tu catálogo producto por producto sin conocimientos técnicos. Sube fotos y videos de cada plato.',
       platformStep1Title: '1. Agrega Categorías & Platillos',
-      platformStep1Desc: 'Organiza por Entradas, Platos Fuertes, Bebidas y Especialidades con fotos atractivas.',
+      platformStep1Desc: 'Organiza por Entradas, Platos Fuertes, Bebidas y Especialidades con fotos y videos.',
       platformStep2Title: '2. Control de Stock en 1 Clic',
       platformStep2Desc: '¿Se terminó un ingrediente? Apágalo en tiempo real sin tener que tachar cartas de papel.',
       platformStep3Title: '3. Cambios en Vivo en Todas las Mesas',
@@ -267,6 +351,23 @@ export const translations: Record<'es' | 'en', Translations> = {
       whatsappDesc:
         'Sin pagar comisiones del 30% a aplicaciones de terceros. El cliente arma su carrito en el menú digital y te envía un WhatsApp con la orden perfectamente desglosada y el total sumado.',
       whatsappButton: 'Ver Demo de Pedido WhatsApp',
+    },
+    infoLink: {
+      tag: 'Ecosistema Todo en Uno',
+      headline: 'Un Solo Enlace Inteligente para',
+      headlineHighlight: 'Instagram, WhatsApp y tus Mesas',
+      subtitle:
+        'Reemplaza los enlaces genéricos de Linktree. Markethers te da una página ultra rápida que convierte seguidores de redes en comensales presenciales y pedidos directos.',
+      feature1Title: 'Carta Digital con Fotos & Videos:',
+      feature1Desc: 'Tus clientes hojean tu menú interactivo o tu PDF oficial desde su teléfono.',
+      feature2Title: 'Pase de Lealtad en 1 Toque:',
+      feature2Desc: 'Guardan su tarjeta en Apple Wallet o Google Wallet al instante sin formularios largos.',
+      feature3Title: 'Filtro de Reseñas 5 Estrellas:',
+      feature3Desc: 'Canaliza comensales felices directo a tu ficha de Google Maps para subir en el ranking.',
+      feature4Title: 'Chat y Pedidos sin Comisiones:',
+      feature4Desc: 'Envía pedidos armados directo a tu WhatsApp con el 100% de la ganancia para tu caja.',
+      previewTitle: 'Así ve el cliente tu InfoLink:',
+      previewBioDesc: 'Tu link exclusivo: markethers.com/tu-negocio',
     },
     pillars: {
       tag: 'Los 3 Pilares Markethers',
@@ -372,6 +473,119 @@ export const translations: Record<'es' | 'en', Translations> = {
       row6App: '$3,000 - $8,000 USD',
       row6Markethers: 'Accesible, listo hoy mismo',
     },
+    testimonials: {
+      tag: 'Casos Reales de Éxito',
+      headline: 'Negocios que dejaron atrás el cartón y',
+      headlineHighlight: 'multiplicaron sus visitas',
+      subtitle: 'Conoce cómo comercios locales como el tuyo aumentan su facturación y ahorran miles en comisiones.',
+      items: [
+        {
+          name: 'Mariana López',
+          role: 'Fundadora',
+          business: 'Bruma Café de Especialidad',
+          avatar: '☕',
+          quote:
+            'Nuestros clientes quedaron fascinados al ver su tarjeta en Apple Wallet. En el primer mes logramos +38% de visitas recurrentes y dejamos de gastar en imprimir tarjetas de cartón que siempre terminaban en la basura.',
+          metric: '+38% en visitas recurrentes',
+          stars: 5,
+        },
+        {
+          name: 'Carlos Restrepo',
+          role: 'Chef & Propietario',
+          business: 'Craft Burger Lab',
+          avatar: '🍔',
+          quote:
+            'El menú con pedidos directos a WhatsApp nos cambió la vida. Ahorramos más de $1,200 USD al mes que antes se llevaban las aplicaciones de delivery en comisiones. El dinero entra directo a nuestra cuenta.',
+          metric: '$1,200 USD/mes ahorrados en comisiones',
+          stars: 5,
+        },
+        {
+          name: 'Javier Morales',
+          role: 'Master Barber',
+          business: 'El Galán Barber Studio',
+          avatar: '💈',
+          quote:
+            'El filtro de Google Reviews es una genialidad. Pasamos de 4.2 a 4.9 estrellas con más de 280 calificaciones reales. Ahora somos la barbería número 1 que recomienda Google Maps en nuestra ciudad.',
+          metric: '4.9⭐ #1 en Google Maps local',
+          stars: 5,
+        },
+      ],
+    },
+    pricing: {
+      tag: 'Inversión Clara & Sin Comisiones',
+      headline: 'Planes Transparentes que se pagan solos',
+      headlineHighlight: 'desde el primer fin de semana',
+      subtitle:
+        'Cero comisiones por venta. Todo lo que generas es 100% para tu negocio. Elige el plan perfecto para tu local.',
+      monthly: 'Pago Mensual',
+      annual: 'Pago Anual',
+      annualDiscount: 'Ahorra 35%',
+      billedAnnually: 'facturado anualmente',
+      billedMonthly: 'facturado mes a mes',
+      guaranteeTitle: '🛡️ Garantía Blindada de Satisfacción por 14 Días',
+      guaranteeDesc:
+        'Prueba Markethers en tu negocio. Si no ves más clientes regresando o no te encanta la experiencia, te devolvemos el 100% de tu dinero sin preguntas ni condiciones ocultas.',
+      trust1: 'Sin contratos forzosos',
+      trust2: 'Cancela en cualquier momento con 1 clic',
+      trust3: 'Soporte humano por WhatsApp',
+      plans: [
+        {
+          id: 'starter',
+          name: 'Plan Despegue',
+          description: 'Perfecto para negocios que quieren eliminar el cartón y tener su menú digital listo.',
+          monthlyPrice: 29,
+          annualPrice: 19,
+          features: [
+            'Hasta 400 clientes activos en Wallet',
+            'Menú Digital (Sube PDF o crea en sistema)',
+            'Tarjetas Apple Wallet & Google Wallet',
+            'Escáner Web PWA para 2 cajeros',
+            'Pedidos directos por WhatsApp (0% comisiones)',
+            'Código QR para mostrador y mesas',
+            'Soporte por email y WhatsApp',
+          ],
+          cta: 'Comenzar con Despegue',
+        },
+        {
+          id: 'pro',
+          name: 'Plan Pro Markethers',
+          badge: '🔥 El Más Elegido (92% de negocios)',
+          popular: true,
+          description: 'Para comercios que quieren dominar su zona, llenar mesas y blindar su reputación.',
+          monthlyPrice: 49,
+          annualPrice: 32,
+          features: [
+            'Clientes y Tarjetas Wallet ILIMITADAS',
+            'Menú Digital con Fotos Y VIDEOS de platillos',
+            'Sube tu carta en PDF con visor de alta definición',
+            'Filtro Inteligente de Reseñas Google 5⭐',
+            'Notificaciones Push Georreferenciadas (cercanía)',
+            'Escáneres de cajero ilimitados con PIN',
+            'InfoLink centralizado para bio de Instagram',
+            'CRM con segmentación de clientes VIP y en riesgo',
+            'Soporte prioritario 24/7 por WhatsApp',
+          ],
+          cta: 'Comenzar Prueba Pro Gratis',
+        },
+        {
+          id: 'franchise',
+          name: 'Plan Multi-Sucursal',
+          description: 'Para marcas con varias sucursales o cadenas que buscan un control centralizado.',
+          monthlyPrice: 99,
+          annualPrice: 65,
+          features: [
+            'Todo lo incluido en el Plan Pro',
+            'Hasta 5 sucursales administradas en un solo panel',
+            'Dominio propio personalizado (tu-marca.com)',
+            'Métricas comparativas entre sucursales',
+            'Auditoría y reportes avanzados de cajeros',
+            'Capacitación personalizada por videollamada para tu equipo',
+            'Gerente de cuenta dedicado',
+          ],
+          cta: 'Hablar con Especialista',
+        },
+      ],
+    },
     roi: {
       tag: 'Calculadora de Retorno de Inversión',
       headline: '¿Cuánto dinero extra puede generar tu negocio?',
@@ -399,7 +613,7 @@ export const translations: Record<'es' | 'en', Translations> = {
       items: [
         {
           q: '¿Cómo funciona la facilidad de subir mi menú?',
-          a: 'Es extremadamente sencillo: si ya tienes tu menú diseñado en PDF, una foto de tu carta o una imagen clara, puedes subirlo con un solo clic. Nuestra plataforma lo interpreta de inmediato y genera tus códigos QR para colocar en mesas o barra. Si prefieres crearlo aquí, nuestro editor paso a paso te permite agregar platillos y precios en menos de 2 minutos.',
+          a: 'Es extremadamente sencillo: si ya tienes tu menú diseñado en PDF, una foto de tu carta o una imagen clara, puedes subirlo con un solo clic. Nuestra plataforma lo interpreta de inmediato y genera tus códigos QR para colocar en mesas o barra. Si prefieres crearlo aquí, nuestro editor paso a paso te permite agregar platillos, fotos, videos y precios en menos de 2 minutos.',
         },
         {
           q: '¿Mis clientes necesitan instalar alguna aplicación para su tarjeta de sellos?',
@@ -410,23 +624,23 @@ export const translations: Record<'es' | 'en', Translations> = {
           a: 'Nuestro Filtro Inteligente protege la reputación de tu negocio. Si un cliente da 4 o 5 estrellas, se le invita a publicarlo en Google Maps para subir tu ranking. Si da 1, 2 o 3 estrellas, se abre una ventana de feedback privado que te llega directo a tu WhatsApp para que puedas compensarlo y resolver el problema en privado sin dañar tu puntuación pública.',
         },
         {
+          q: '¿Cobran alguna comisión por los pedidos que recibo en mi menú?',
+          a: '0% comisiones. A diferencia de las apps de entrega que cobran entre el 20% y el 35% de cada platillo, con Markethers el cliente hace su pedido y te llega directo a tu WhatsApp. El 100% del dinero es para tu negocio.',
+        },
+        {
           q: '¿Cómo atienden mis meseros o cajeros los sellos de lealtad?',
           a: 'Cero aparatos especiales. Tu personal abre la web del escáner en cualquier teléfono celular o tablet con cámara, introduce un PIN seguro de 4 dígitos y al enfocar la pantalla del cliente suma el sello en 2 segundos con sonido de confirmación.',
         },
         {
-          q: '¿Puedo personalizar el diseño con los colores y logo de mi negocio?',
-          a: 'Sí, totalmente. Puedes subir el logo de tu negocio, elegir los colores exactos de tu marca, el ícono de los sellos (café, estrella, regalo, tijeras, hamburguesa, etc.) y definir el premio que desees otorgar.',
-        },
-        {
-          q: '¿Los pedidos del menú digital cobran alguna comisión por venta?',
-          a: '0% comisiones. A diferencia de las apps de entrega que cobran entre el 20% y el 35% de cada platillo, con Markethers el cliente hace su pedido y te llega directo a tu WhatsApp. El 100% del dinero es para tu negocio.',
+          q: '¿Puedo cancelar mi plan si no estoy satisfecho?',
+          a: 'Sí, en cualquier momento con un solo clic desde tu panel y sin penalizaciones. Además, cuentas con nuestra Garantía de 14 Días para probarlo sin ningún riesgo.',
         },
       ],
     },
     cta: {
       tag: 'Comienza en Minutos',
       headline: 'Convierte comensales de una sola vez en clientes frecuentes de por vida',
-      subtitle: 'Únete a los restaurantes, cafeterías y salones que están modernizando su negocio con Markethers.',
+      subtitle: 'Únete a los más de 180 restaurantes, cafeterías y salones que están modernizando su negocio con Markethers.',
       btnPanel: 'Abrir Panel de Control (/app)',
       btnDemo: 'Ver Negocio de Demostración',
     },
@@ -445,6 +659,7 @@ export const translations: Record<'es' | 'en', Translations> = {
       merchantPanel: 'Menu Manager',
       tryCustomerCard: 'Try Customer Card',
       langSelect: 'Language',
+      pricingNav: 'Plans & Pricing',
     },
     hero: {
       badge: 'The Operating System and Loyalty Club for Local Businesses',
@@ -452,24 +667,34 @@ export const translations: Record<'es' | 'en', Translations> = {
       headlineHighlight: 'Apple Wallet & Google Wallet',
       headlinePart2: '+ Digital Menu with zero apps to install.',
       subtitle:
-        'Replace paper punch cards and outdated printed menus with a sleek modern suite: digital stamp cards saved on your customers’ phones, ultra-friendly digital menu (upload your file or build it here in minutes), and a smart 5-star Google Reviews booster.',
+        'Sell directly via WhatsApp, fill your tables with digital stamp cards living inside your customers’ smartphones, and boost your 5-star Google Maps reviews. All in one place and ready in 2 minutes.',
       ctaPrimary: 'Explore Dashboard (/app)',
       ctaSecondary: 'Try as Customer (Demo)',
       ctaScanner: 'Cashier Scanner',
       check1: 'No apps for customers (100% native)',
-      check2: 'Upload your menu or build it in 2 min',
-      check3: 'Works on 100% of iPhone & Android',
+      check2: 'Upload your PDF or build in 2 min',
+      check3: '0% sales commissions on your orders',
       simTitle: 'Real-time Interactive Simulator',
       simSubtitle: 'Click to simulate how a customer collects stamps at your shop:',
       simButton: 'Simulate purchase (+1 Stamp)',
       simRewardUnlocked: 'Reward Unlocked! 🎉',
+    },
+    statsBar: {
+      activeBusinesses: '+180',
+      activeBusinessesLabel: 'Active Local Businesses',
+      rating: '4.9 / 5.0 ⭐',
+      ratingLabel: 'Verified Customer Rating',
+      walletsCreated: '+125,000',
+      walletsCreatedLabel: 'Wallet Passes Installed',
+      zeroCommission: '0%',
+      zeroCommissionLabel: 'Sales Commission Fees',
     },
     menuSpotlight: {
       tag: '⭐ Star Feature: Digital Menu',
       headline: 'Your Digital Menu Ready in Minutes:',
       headlineHighlight: 'Your Way, Zero Hassle',
       description:
-        'Designed to be exceptionally friendly and easy. If you already have your menu in PDF, photo, or paper, upload it directly. If you prefer to build it from scratch, our visual editor takes less than 2 minutes.',
+        'Designed to be exceptionally friendly and easy. If you already have your menu in PDF, photo, or paper, upload it directly. If you prefer to build it from scratch, our visual editor takes less than 2 minutes and supports food photos and videos.',
       tabUpload: '📄 Option 1: Upload Existing Menu',
       tabPlatform: '⚡ Option 2: Build in Platform',
       uploadTitle: 'Already have a printed menu or PDF? Just upload it.',
@@ -488,9 +713,9 @@ export const translations: Record<'es' | 'en', Translations> = {
       uploadSimSuccessMsg: 'Extracted 16 items across 4 categories (Coffee, Breakfast, Desserts, Drinks). Live on your table QR codes right now!',
       platformTitle: 'Super Friendly Visual Menu Builder',
       platformSubtitle:
-        'Create and customize your menu item by item without any technical skills. Update prices in 1 second.',
+        'Create and customize your menu item by item without any technical skills. Upload photos and dish preparation videos.',
       platformStep1Title: '1. Add Categories & Dishes',
-      platformStep1Desc: 'Group your offerings by Starters, Mains, Cocktails, and Desserts with crisp photos.',
+      platformStep1Desc: 'Group your offerings by Starters, Mains, Cocktails, and Desserts with crisp photos and videos.',
       platformStep2Title: '2. One-Tap Stock Control',
       platformStep2Desc: 'Ran out of an ingredient? Mark it as "Sold Out" instantly without scratching paper menus.',
       platformStep3Title: '3. Live Updates Across All Tables',
@@ -504,6 +729,23 @@ export const translations: Record<'es' | 'en', Translations> = {
       whatsappDesc:
         'No 30% delivery commission cuts to third-party apps. Guests build their cart on the digital menu and send a neat, calculated order breakdown straight to your WhatsApp.',
       whatsappButton: 'View WhatsApp Order Demo',
+    },
+    infoLink: {
+      tag: 'All-In-One Ecosystem',
+      headline: 'One Smart Bio Link for',
+      headlineHighlight: 'Instagram, WhatsApp & Tables',
+      subtitle:
+        'Replace generic link-in-bio pages. Markethers gives you an ultra-fast portal that turns social media followers into in-person diners and direct orders.',
+      feature1Title: 'Digital Menu with Photos & Videos:',
+      feature1Desc: 'Guests browse your interactive items or view your official designed PDF right on their phones.',
+      feature2Title: '1-Tap Mobile Wallet Pass:',
+      feature2Desc: 'Customers save their stamp card directly to Apple or Google Wallet without lengthy forms.',
+      feature3Title: '5-Star Google Review Booster:',
+      feature3Desc: 'Routes happy diners to your Google Maps listing to dominate local search rankings.',
+      feature4Title: 'Commission-Free Ordering:',
+      feature4Desc: 'Guests send complete orders straight to your WhatsApp with 100% revenue kept by your store.',
+      previewTitle: 'How guests see your InfoLink:',
+      previewBioDesc: 'Your custom link: markethers.com/your-business',
     },
     pillars: {
       tag: 'The 3 Markethers Pillars',
@@ -609,6 +851,119 @@ export const translations: Record<'es' | 'en', Translations> = {
       row6App: '$3,000 - $8,000 USD',
       row6Markethers: 'Affordable, ready today',
     },
+    testimonials: {
+      tag: 'Real Success Stories',
+      headline: 'Local businesses that ditched paper cards and',
+      headlineHighlight: 'multiplied their customer visits',
+      subtitle: 'See how local businesses just like yours grow revenue and save thousands in delivery commissions.',
+      items: [
+        {
+          name: 'Mariana Lopez',
+          role: 'Founder',
+          business: 'Bruma Specialty Coffee',
+          avatar: '☕',
+          quote:
+            'Our customers were blown away having their stamp card right inside Apple Wallet. In month one we saw a +38% jump in repeat visits, and we stopped throwing money away on paper punch cards.',
+          metric: '+38% increase in repeat visits',
+          stars: 5,
+        },
+        {
+          name: 'Carlos Restrepo',
+          role: 'Chef & Owner',
+          business: 'Craft Burger Lab',
+          avatar: '🍔',
+          quote:
+            'Direct WhatsApp ordering completely changed our unit economics. We save over $1,200 USD every month that previously vanished into delivery app commission cuts. The revenue stays with us.',
+          metric: '$1,200 USD/mo saved in commissions',
+          stars: 5,
+        },
+        {
+          name: 'Javier Morales',
+          role: 'Master Barber',
+          business: 'El Galan Barber Studio',
+          avatar: '💈',
+          quote:
+            'The Smart Google Reviews filter is pure magic. We went from a 4.2 to a 4.9 rating with over 280 genuine 5-star reviews. Today we are the #1 barbershop recommended on Google Maps in our city.',
+          metric: '4.9⭐ #1 ranking on Google Maps',
+          stars: 5,
+        },
+      ],
+    },
+    pricing: {
+      tag: 'Clear Investment & Zero Commissions',
+      headline: 'Transparent plans that pay for themselves',
+      headlineHighlight: 'on your very first weekend',
+      subtitle:
+        'Zero commission cuts on your orders. Everything you make belongs 100% to your business. Pick the plan built for you.',
+      monthly: 'Monthly Billing',
+      annual: 'Annual Billing',
+      annualDiscount: 'Save 35%',
+      billedAnnually: 'billed annually',
+      billedMonthly: 'billed monthly',
+      guaranteeTitle: '🛡️ 14-Day Ironclad Satisfaction Guarantee',
+      guaranteeDesc:
+        'Try Markethers in your business risk-free. If you do not see more repeat customers or do not love the software, we will refund 100% of your money. No hassle, no questions asked.',
+      trust1: 'No lock-in contracts',
+      trust2: 'Cancel anytime with 1 click',
+      trust3: 'Human support via WhatsApp',
+      plans: [
+        {
+          id: 'starter',
+          name: 'Starter Plan',
+          description: 'Great for single stores looking to replace paper cards and launch a digital menu.',
+          monthlyPrice: 29,
+          annualPrice: 19,
+          features: [
+            'Up to 400 active Wallet pass customers',
+            'Digital Menu (Upload PDF or build online)',
+            'Apple Wallet & Google Wallet stamp cards',
+            'PWA Web Scanner for 2 cashiers',
+            'Direct WhatsApp ordering (0% commissions)',
+            'Printable table and counter QR stand',
+            'Email & WhatsApp support',
+          ],
+          cta: 'Start with Starter',
+        },
+        {
+          id: 'pro',
+          name: 'Pro Markethers Plan',
+          badge: '🔥 Most Popular (Chosen by 92% of businesses)',
+          popular: true,
+          description: 'For growing businesses looking to dominate their area, pack tables, and protect reviews.',
+          monthlyPrice: 49,
+          annualPrice: 32,
+          features: [
+            'UNLIMITED customers & Wallet passes',
+            'Digital Menu with Food Photos AND VIDEOS',
+            'Upload designed PDF menu with HD viewer',
+            'Smart 5-Star Google Reviews Filter',
+            'Geofenced Lock-Screen Push Notifications',
+            'Unlimited cashier scanners with PIN code',
+            'Centralized InfoLink for Instagram bio',
+            'CRM with VIP & At-Risk customer segmentation',
+            '24/7 Priority WhatsApp support',
+          ],
+          cta: 'Start Free Pro Trial',
+        },
+        {
+          id: 'franchise',
+          name: 'Multi-Location Plan',
+          description: 'For multi-location brands and restaurant groups requiring centralized oversight.',
+          monthlyPrice: 99,
+          annualPrice: 65,
+          features: [
+            'Everything included in Pro Plan',
+            'Up to 5 locations managed in one account',
+            'Custom brand domain (your-brand.com)',
+            'Cross-branch comparative performance analytics',
+            'Advanced cashier audit trail & logs',
+            '1-on-1 team onboarding video call',
+            'Dedicated account manager',
+          ],
+          cta: 'Talk to a Specialist',
+        },
+      ],
+    },
     roi: {
       tag: 'Return on Investment Calculator',
       headline: 'How much extra revenue can your business generate?',
@@ -636,7 +991,7 @@ export const translations: Record<'es' | 'en', Translations> = {
       items: [
         {
           q: 'How easy is it to upload my existing menu?',
-          a: 'Extremely easy! If you have your menu designed as a PDF, a photo of your paper menu, or an image file, simply upload it with one click. Our system reads it cleanly and generates your ready-to-print table QR codes in seconds. If you prefer building it in the platform, our visual editor lets you add dishes and prices in under 2 minutes.',
+          a: 'Extremely easy! If you have your menu designed as a PDF, a photo of your paper menu, or an image file, simply upload it with one click. Our system reads it cleanly and generates your ready-to-print table QR codes in seconds. If you prefer building it in the platform, our visual editor lets you add dishes, photos, videos, and prices in under 2 minutes.',
         },
         {
           q: 'Do my customers need to install an app to get their loyalty card?',
@@ -647,23 +1002,23 @@ export const translations: Record<'es' | 'en', Translations> = {
           a: 'Our Smart Filter safeguards your public reputation. If a customer awards 4 or 5 stars, they are invited to publish it directly on Google Maps. If they select 1, 2, or 3 stars, it opens a private feedback form that goes straight to your WhatsApp so you can resolve it privately without hurting your public score.',
         },
         {
+          q: 'Do you take any commissions on WhatsApp digital menu orders?',
+          a: '0% commissions. Unlike delivery apps that take 20% to 35% cuts from your food, Markethers orders are delivered directly to your WhatsApp with 100% of the money kept by your business.',
+        },
+        {
           q: 'Do my cashiers need expensive barcode scanners or hardware?',
           a: 'Zero special hardware. Your staff simply opens the web scanner link on any smartphone or tablet with a camera, types in their 4-digit PIN, and scans the customer’s screen in 2 seconds with clear audio confirmation.',
         },
         {
-          q: 'Can I customize the cards with my own branding and logo?',
-          a: 'Yes, 100%. You can upload your business logo, pick brand colors, choose your stamp icon (coffee, star, gift, scissors, burger, etc.), and customize your reward title.',
-        },
-        {
-          q: 'Do WhatsApp digital menu orders take any sales commissions?',
-          a: '0% commissions. Unlike delivery apps that take 20% to 35% cuts from your food, Markethers orders are delivered directly to your WhatsApp with 100% of the money kept by your business.',
+          q: 'Can I cancel my plan if I am not satisfied?',
+          a: 'Yes, anytime with 1 click from your dashboard with zero cancellation fees. Plus, you are covered by our 14-Day Money-Back Guarantee to try it completely risk-free.',
         },
       ],
     },
     cta: {
       tag: 'Get Started in Minutes',
       headline: 'Turn one-time diners into lifelong regulars',
-      subtitle: 'Join the cafes, restaurants, and salons modernizing their customer experience with Markethers.',
+      subtitle: 'Join over 180 local restaurants, cafes, and salons modernizing their customer experience with Markethers.',
       btnPanel: 'Open Control Dashboard (/app)',
       btnDemo: 'Explore Live Demo Store',
     },

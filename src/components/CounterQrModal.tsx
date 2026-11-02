@@ -9,18 +9,60 @@ interface CounterQrModalProps {
   business: Business;
   isOpen: boolean;
   onClose: () => void;
+  type?: 'menu' | 'counter' | 'discount' | 'reviews' | 'infolink';
 }
 
-export function CounterQrModal({ business, isOpen, onClose }: CounterQrModalProps) {
+export function CounterQrModal({ business, isOpen, onClose, type = 'counter' }: CounterQrModalProps) {
   const [qrUrl, setQrUrl] = useState<string>('');
   const printRef = useRef<HTMLDivElement>(null);
+
+  const qrConfig = {
+    counter: {
+      title: 'QR Mostrador / Tarjeta de Lealtad',
+      desc: 'Coloca este poster con código QR en tu caja para que tus clientes instalen su tarjeta Wallet en 1 segundo.',
+      badge: '¡Club de Clientes VIP!',
+      subbadge: `Suma ${business?.loyaltyConfig?.totalStamps || 6} sellos digitales en tu celular`,
+      path: '',
+    },
+    menu: {
+      title: 'QR Menú Digital para Mesas',
+      desc: 'Coloca este QR en cada mesa o barra para que los comensales consulten la carta completa con fotos y videos.',
+      badge: '¡Escanea la Carta Digital!',
+      subbadge: 'Menú interactivo con fotos, videos y precios en tiempo real',
+      path: '?tab=menu',
+    },
+    discount: {
+      title: 'QR Descuento & Promoción Flash',
+      desc: 'Ofrece un incentivo especial de bienvenida para capturar nuevos clientes al instante.',
+      badge: '¡Descuento de Bienvenida!',
+      subbadge: 'Escanea y recibe un beneficio exclusivo en tu consumo de hoy',
+      path: '?promo=bienvenida',
+    },
+    reviews: {
+      title: 'QR Reseñas de Google (Filtro 5⭐)',
+      desc: 'Estimula calificaciones positivas de 5 estrellas en Google Maps con filtro inteligente.',
+      badge: '⭐ ¡Califícanos en Google!',
+      subbadge: 'Tu opinión nos importa. Ayúdanos a seguir mejorando',
+      path: '?action=review',
+    },
+    infolink: {
+      title: 'QR InfoLink Todo-en-Uno',
+      desc: 'El QR universal que centraliza tu menú, tarjeta Wallet, WhatsApp y Google Maps en un solo link.',
+      badge: '📲 Conecta con Nosotros',
+      subbadge: 'Menú • Fidelización • WhatsApp • Redes',
+      path: '',
+    },
+  }[type];
 
   useEffect(() => {
     if (!isOpen) return;
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://markethers.app';
-    const storeUrl = `${origin}/${business.slug}`;
+    const reviewUrl = business?.googleReviews?.googleReviewUrl;
+    const targetUrl = type === 'reviews' && reviewUrl
+      ? reviewUrl
+      : `${origin}/${business?.slug || 'demo'}${qrConfig.path}`;
 
-    QRCode.toDataURL(storeUrl, {
+    QRCode.toDataURL(targetUrl, {
       width: 400,
       margin: 1,
       color: {
@@ -30,7 +72,7 @@ export function CounterQrModal({ business, isOpen, onClose }: CounterQrModalProp
     })
       .then(url => setQrUrl(url))
       .catch(err => console.error(err));
-  }, [isOpen, business.slug]);
+  }, [isOpen, business?.slug, business?.googleReviews?.googleReviewUrl, type, qrConfig.path]);
 
   if (!isOpen) return null;
 
@@ -48,38 +90,38 @@ export function CounterQrModal({ business, isOpen, onClose }: CounterQrModalProp
           <X className="w-5 h-5" />
         </button>
 
-        <div className="flex items-center gap-2 text-amber-400 mb-2">
+        <div className="flex items-center gap-2 text-emerald-400 mb-2">
           <QrIcon className="w-5 h-5" />
-          <h3 className="font-bold text-lg text-white">Stand para Mostrador / Mesa</h3>
+          <h3 className="font-bold text-lg text-white">{qrConfig.title}</h3>
         </div>
         <p className="text-xs text-zinc-400 mb-6">
-          Coloca este poster con código QR en tu caja o en las mesas para que tus clientes sumen sellos automáticamente.
+          {qrConfig.desc}
         </p>
 
         {/* Printable Stand Preview */}
         <div
           ref={printRef}
-          className="bg-white text-zinc-900 p-8 rounded-3xl shadow-xl border-4 border-amber-400/40 text-center flex flex-col items-center justify-between min-h-[460px]"
+          className="bg-white text-zinc-900 p-8 rounded-3xl shadow-xl border-4 border-emerald-400/40 text-center flex flex-col items-center justify-between min-h-[460px]"
         >
           {/* Header */}
           <div>
             <div className="text-4xl mb-1">{business.logoUrl}</div>
             <h2 className="text-2xl font-black tracking-tight">{business.name}</h2>
             <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider mt-0.5">
-              Club de Fidelidad Digital
+              Markethers Smart QR
             </p>
           </div>
 
           {/* Reward Callout */}
-          <div className="my-4 bg-amber-50 border border-amber-200 rounded-2xl p-4 w-full">
-            <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider block">
-              ¡Recompensa Exclusiva!
+          <div className="my-4 bg-emerald-50 border border-emerald-200 rounded-2xl p-4 w-full">
+            <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider block">
+              {qrConfig.badge}
             </span>
-            <p className="text-sm font-black text-amber-950 mt-0.5">
-              {business.loyaltyConfig.rewardTitle}
+            <p className="text-sm font-black text-slate-950 mt-0.5">
+              {type === 'counter' ? business.loyaltyConfig.rewardTitle : business.tagline}
             </p>
-            <span className="text-[11px] text-amber-700 mt-1 block">
-              Acumula {business.loyaltyConfig.totalStamps} sellos digitales en tu celular
+            <span className="text-[11px] text-emerald-700 mt-1 block">
+              {qrConfig.subbadge}
             </span>
           </div>
 
