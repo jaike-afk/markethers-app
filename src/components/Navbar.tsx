@@ -20,6 +20,11 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [storesOpen, setStoresOpen] = useState(false);
 
+  // When on the dedicated /app panel, hide the landing page navbar
+  if (pathname === '/app') {
+    return null;
+  }
+
   const sampleStores = [
     { name: 'Café Aroma (Especialidad)', slug: 'aroma-cafe', icon: '☕' },
     { name: 'Barber King (Barbería)', slug: 'barber-king', icon: '💈' },
