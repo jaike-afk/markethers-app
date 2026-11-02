@@ -5,8 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Sparkles, Mail, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
 
-export const instant = false;
-
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('jaikeromero@gmail.com');

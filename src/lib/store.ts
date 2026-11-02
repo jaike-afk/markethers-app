@@ -427,6 +427,11 @@ class DataStore {
     return this.businesses[idx];
   }
 
+  addBusiness(business: Business): Business {
+    this.businesses.unshift(business);
+    return business;
+  }
+
   // Customers
   getCustomersByBusiness(businessId: string): Customer[] {
     return this.customers.filter(c => c.businessId === businessId);

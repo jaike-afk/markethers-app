@@ -22,8 +22,6 @@ import {
 import { store } from '@/lib/store';
 import { Business } from '@/types';
 
-export const instant = false;
-
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
