@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { INITIAL_BUSINESSES, INITIAL_CUSTOMERS, INITIAL_MENU_ITEMS, INITIAL_TRANSACTIONS } from '@/lib/store';
 import { Business, Customer, MenuItem, StampTransaction } from '@/types';
+import { getCurrentUser, logoutUser, UserAccount } from '@/lib/auth';
 import { AppleWalletCard } from '@/components/AppleWalletCard';
 import { CameraScanner } from '@/components/CameraScanner';
 import { CounterQrModal } from '@/components/CounterQrModal';
@@ -57,6 +59,10 @@ import {
 } from 'lucide-react';
 
 export default function MarkethersAppPortal() {
+  const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
+  const [authChecking, setAuthChecking] = useState(true);
+
   const [businesses, setBusinesses] = useState<Business[]>(INITIAL_BUSINESSES);
   const [selectedBusinessId, setSelectedBusinessId] = useState<string>(INITIAL_BUSINESSES[0].id);
 
@@ -159,19 +165,30 @@ export default function MarkethersAppPortal() {
   const [newCardZip, setNewCardZip] = useState('06700');
   const [planChangeToast, setPlanChangeToast] = useState<string | null>(null);
 
-  // Sync with localStorage on client load
+  // Sync with localStorage & authenticate session on client load
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
+      const user = getCurrentUser();
+      if (!user) {
+        // Redirigir a login si no hay sesión activa
+        router.push('/login');
+        return;
+      }
+      setCurrentUser(user);
+      setAuthChecking(false);
+
       const customBiz = JSON.parse(localStorage.getItem('markethers_custom_businesses') || '[]');
       if (customBiz.length > 0) {
         setBusinesses([...customBiz, ...INITIAL_BUSINESSES]);
-        const activeBizId = localStorage.getItem('markethers_active_business_id');
+        const activeBizId = localStorage.getItem('markethers_active_business_id') || user.businessId;
         if (activeBizId && [...customBiz, ...INITIAL_BUSINESSES].some((b: Business) => b.id === activeBizId)) {
           setSelectedBusinessId(activeBizId);
         } else {
           setSelectedBusinessId(customBiz[0].id);
         }
+      } else if (user.businessId && INITIAL_BUSINESSES.some(b => b.id === user.businessId)) {
+        setSelectedBusinessId(user.businessId);
       }
       const savedSub = localStorage.getItem('markethers_subscription');
       if (savedSub) {
@@ -180,8 +197,9 @@ export default function MarkethersAppPortal() {
       }
     } catch (e) {
       console.error(e);
+      setAuthChecking(false);
     }
-  }, []);
+  }, [router]);
 
   const handleSelectPlan = (planId: 'starter' | 'pro' | 'franchise') => {
     const planDetails = {
@@ -375,6 +393,19 @@ Contacto y Soporte: soporte@markethers.com
       ]);
     }, 700);
   };
+
+  if (authChecking) {
+    return (
+      <div className="min-h-screen bg-[#070c13] flex flex-col items-center justify-center text-white">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-400 via-teal-400 to-lime-400 flex items-center justify-center text-zinc-950 font-black shadow-xl shadow-emerald-500/20 mb-4 animate-pulse">
+          <Sparkles className="w-6 h-6 text-zinc-950 fill-zinc-950" />
+        </div>
+        <p className="text-xs text-zinc-400 font-semibold tracking-wide">
+          Verificando sesión segura...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-800 flex font-sans antialiased">
@@ -689,18 +720,23 @@ Contacto y Soporte: soporte@markethers.com
           </div>
         </div>
 
-        {/* BOTTOM USER PROFILE: JAIKE ROMERO */}
+        {/* BOTTOM USER PROFILE */}
         <div className="p-3 border-t border-slate-900 bg-[#070c13] flex items-center justify-between">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow">
-              JR
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-500 text-zinc-950 font-black text-xs flex items-center justify-center shrink-0 shadow">
+              {(currentUser?.name || 'Jaike Romero')
+                .split(' ')
+                .map((n: string) => n[0])
+                .slice(0, 2)
+                .join('')
+                .toUpperCase() || 'MR'}
             </div>
             <div className="min-w-0">
               <span className="text-xs font-bold text-white block truncate">
-                Jaike Romero
+                {currentUser?.name || 'Jaike Romero'}
               </span>
               <span className="text-[10px] text-slate-400 truncate block">
-                jaikeromer...
+                {currentUser?.email || 'jaikeromero@gmail.com'}
               </span>
             </div>
           </div>
@@ -715,13 +751,17 @@ Contacto y Soporte: soporte@markethers.com
               <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-emerald-500 rounded-full" />
             </button>
 
-            <Link
-              href="/"
-              className="p-1.5 text-slate-400 hover:text-white rounded-lg transition-colors"
-              title="Cerrar sesión / Volver a la página principal"
+            <button
+              type="button"
+              onClick={() => {
+                logoutUser();
+                router.push('/login');
+              }}
+              className="p-1.5 text-slate-400 hover:text-red-400 rounded-lg transition-colors cursor-pointer"
+              title="Cerrar sesión"
             >
               <LogOut className="w-4 h-4" />
-            </Link>
+            </button>
           </div>
         </div>
       </aside>

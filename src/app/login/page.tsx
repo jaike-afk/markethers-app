@@ -3,21 +3,38 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Mail, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Sparkles, Mail, Lock, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { authenticateUser } from '@/lib/auth';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('jaikeromero@gmail.com');
-  const [password, setPassword] = useState('••••••••••••');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setLoading(true);
+
     setTimeout(() => {
+      const result = authenticateUser(email, password);
+      if (!result.success) {
+        setError(result.error || 'Credenciales incorrectas');
+        setLoading(false);
+        return;
+      }
+
       setLoading(false);
       router.push('/app');
-    }, 700);
+    }, 400);
+  };
+
+  const handleUseDemoAccount = () => {
+    setEmail('jaikeromero@gmail.com');
+    setPassword('password123');
+    setError(null);
   };
 
   return (
@@ -47,6 +64,14 @@ export default function LoginPage() {
             </p>
           </div>
 
+          {/* Error Banner */}
+          {error && (
+            <div className="p-3.5 bg-red-500/10 border border-red-500/30 text-red-400 rounded-2xl text-xs font-semibold flex items-start gap-2.5 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="text-xs font-bold text-zinc-300 block mb-1">
@@ -56,9 +81,10 @@ export default function LoginPage() {
                 <input
                   type="email"
                   required
+                  placeholder="ej. tu@negocio.com"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white outline-none focus:border-emerald-500"
+                  className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 outline-none focus:border-emerald-500"
                 />
               </div>
             </div>
@@ -73,19 +99,20 @@ export default function LoginPage() {
               <input
                 type="password"
                 required
+                placeholder="Ingresa tu contraseña"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white outline-none focus:border-emerald-500"
+                className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 outline-none focus:border-emerald-500"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-[#22c55e] hover:bg-emerald-600 text-black font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 transition-all hover:scale-[1.01]"
+              className="w-full py-3.5 bg-[#22c55e] hover:bg-emerald-600 text-black font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 transition-all hover:scale-[1.01] disabled:opacity-50"
             >
               {loading ? (
-                <span>Iniciando sesión...</span>
+                <span>Verificando credenciales...</span>
               ) : (
                 <>
                   <span>Entrar a mi Dashboard</span>
@@ -94,6 +121,18 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+
+          {/* Quick Demo Fill Pill */}
+          <div className="p-3 bg-zinc-950 border border-zinc-800/80 rounded-2xl flex items-center justify-between text-[11px]">
+            <span className="text-zinc-400">¿Quieres probar sin registrarte?</span>
+            <button
+              type="button"
+              onClick={handleUseDemoAccount}
+              className="text-emerald-400 font-bold hover:underline"
+            >
+              Usar cuenta demo
+            </button>
+          </div>
 
           <div className="pt-4 border-t border-zinc-800 text-center text-xs text-zinc-400">
             ¿Aún no tienes cuenta para tu negocio?{' '}

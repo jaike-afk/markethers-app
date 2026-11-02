@@ -18,9 +18,11 @@ import {
   Check,
   Star,
   Zap,
+  AlertCircle,
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { Business } from '@/types';
+import { validateCreditCard, saveUser } from '@/lib/auth';
 
 function RegisterForm() {
   const router = useRouter();
@@ -46,6 +48,7 @@ function RegisterForm() {
   const [cardNumber, setCardNumber] = useState('');
   const [cardExp, setCardExp] = useState('');
   const [cardCvc, setCardCvc] = useState('');
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -58,8 +61,70 @@ function RegisterForm() {
 
   const currentPrice = billingCycle === 'annual' ? planPricing.annual : planPricing.monthly;
 
+  const handleCardNumberChange = (val: string) => {
+    const digits = val.replace(/\D/g, '').slice(0, 16);
+    const formatted = digits.replace(/(.{4})/g, '$1 ').trim();
+    setCardNumber(formatted);
+  };
+
+  const handleExpChange = (val: string) => {
+    const digits = val.replace(/\D/g, '').slice(0, 4);
+    if (digits.length >= 3) {
+      setCardExp(`${digits.slice(0, 2)}/${digits.slice(2)}`);
+    } else {
+      setCardExp(digits);
+    }
+  };
+
+  const handleCvcChange = (val: string) => {
+    const digits = val.replace(/\D/g, '').slice(0, 4);
+    setCardCvc(digits);
+  };
+
+  const fillTestCard = () => {
+    setCardNumber('4242 4242 4242 4242');
+    setCardExp('12/28');
+    setCardCvc('123');
+    setPaymentError(null);
+  };
+
+  const handleNextStep1 = () => {
+    setPaymentError(null);
+    if (!businessName.trim()) {
+      setPaymentError('Por favor ingresa el nombre comercial de tu negocio.');
+      return;
+    }
+    setStep(2);
+  };
+
+  const handleNextStep2 = () => {
+    setPaymentError(null);
+    if (!ownerName.trim()) {
+      setPaymentError('Por favor ingresa tu nombre completo.');
+      return;
+    }
+    if (!email.trim() || !email.includes('@')) {
+      setPaymentError('Por favor ingresa un correo electrónico válido.');
+      return;
+    }
+    if (!password || password.length < 6) {
+      setPaymentError('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    setStep(3);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setPaymentError(null);
+
+    // Strict validation of credit card
+    const cardValidation = validateCreditCard(cardNumber, cardExp, cardCvc);
+    if (!cardValidation.valid) {
+      setPaymentError(cardValidation.error || 'Tarjeta de crédito inválida.');
+      return;
+    }
+
     setLoading(true);
 
     // Simulate account provisioning
@@ -106,6 +171,24 @@ function RegisterForm() {
         menuDisplayMode: 'both',
       };
 
+      const userAccount = {
+        id: `user_${Date.now()}`,
+        email: email.trim().toLowerCase(),
+        password,
+        name: ownerName || 'Propietario',
+        businessId: newBiz.id,
+        businessName: newBiz.name,
+        planId: selectedPlan,
+        createdAt: new Date().toISOString(),
+      };
+
+      const saveRes = saveUser(userAccount);
+      if (!saveRes.success) {
+        setPaymentError(saveRes.error || 'Error al registrar usuario.');
+        setLoading(false);
+        return;
+      }
+
       store.addBusiness(newBiz);
 
       if (typeof window !== 'undefined') {
@@ -126,8 +209,8 @@ function RegisterForm() {
               month: 'short',
               year: 'numeric',
             }),
-            cardLast4: cardNumber ? cardNumber.replace(/\D/g, '').slice(-4) || '4242' : '4242',
-            cardBrand: cardNumber.startsWith('5') ? 'Mastercard' : 'Visa',
+            cardLast4: cardValidation.last4,
+            cardBrand: cardValidation.brand,
             cardHolder: ownerName || 'Propietario',
             gateway: paymentMethod,
           })
@@ -136,7 +219,7 @@ function RegisterForm() {
 
       setLoading(false);
       router.push('/app');
-    }, 1200);
+    }, 1000);
   };
 
   return (
@@ -205,7 +288,7 @@ function RegisterForm() {
 
               <button
                 type="button"
-                onClick={() => setStep(2)}
+                onClick={handleNextStep1}
                 className={`flex items-center gap-2 font-bold ${
                   step === 2 ? 'text-emerald-400' : 'text-zinc-500'
                 }`}
@@ -224,7 +307,17 @@ function RegisterForm() {
 
               <button
                 type="button"
-                onClick={() => setStep(3)}
+                onClick={() => {
+                  if (step === 1) {
+                    if (!businessName.trim()) {
+                      setPaymentError('Por favor ingresa el nombre comercial de tu negocio.');
+                      return;
+                    }
+                    setStep(2);
+                  } else if (step === 2) {
+                    handleNextStep2();
+                  }
+                }}
                 className={`flex items-center gap-2 font-bold ${
                   step === 3 ? 'text-emerald-400' : 'text-zinc-500'
                 }`}
@@ -239,6 +332,17 @@ function RegisterForm() {
                 <span>Activación</span>
               </button>
             </div>
+
+            {/* Error Banner */}
+            {paymentError && (
+              <div className="mb-6 p-4 rounded-2xl bg-red-950/60 border border-red-500/50 flex items-start gap-3 text-red-200 text-xs animate-in fade-in">
+                <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <span className="font-bold block text-red-300">No se pudo procesar la solicitud:</span>
+                  <p>{paymentError}</p>
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* STEP 1: BUSINESS DATA */}
@@ -317,8 +421,8 @@ function RegisterForm() {
                   <div className="pt-2">
                     <button
                       type="button"
-                      onClick={() => setStep(2)}
-                      className="w-full py-3.5 bg-[#22c55e] hover:bg-emerald-600 text-black font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+                      onClick={handleNextStep1}
+                      className="w-full py-3.5 bg-[#22c55e] hover:bg-emerald-600 text-black font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 cursor-pointer"
                     >
                       <span>Siguiente: Datos de Acceso</span>
                       <ArrowRight className="w-4 h-4" />
@@ -381,14 +485,14 @@ function RegisterForm() {
                     <button
                       type="button"
                       onClick={() => setStep(1)}
-                      className="py-3.5 px-4 bg-zinc-800 text-zinc-300 font-bold text-xs rounded-xl hover:bg-zinc-700"
+                      className="py-3.5 px-4 bg-zinc-800 text-zinc-300 font-bold text-xs rounded-xl hover:bg-zinc-700 cursor-pointer"
                     >
                       Atrás
                     </button>
                     <button
                       type="button"
-                      onClick={() => setStep(3)}
-                      className="flex-1 py-3.5 bg-[#22c55e] hover:bg-emerald-600 text-black font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+                      onClick={handleNextStep2}
+                      className="flex-1 py-3.5 bg-[#22c55e] hover:bg-emerald-600 text-black font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 cursor-pointer"
                     >
                       <span>Siguiente: Activar Suscripción</span>
                       <ArrowRight className="w-4 h-4" />
@@ -446,43 +550,53 @@ function RegisterForm() {
 
                   {/* Card fields */}
                   <div className="space-y-3 bg-zinc-950 p-4 rounded-2xl border border-zinc-800">
-                    <div>
-                      <label className="text-[11px] font-bold text-zinc-400 block mb-1">
-                        Número de Tarjeta
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-bold text-zinc-400 block">
+                        Número de Tarjeta *
                       </label>
-                      <input
-                        type="text"
-                        placeholder="4242 •••• •••• 4242"
-                        value={cardNumber}
-                        onChange={e => setCardNumber(e.target.value)}
-                        className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-xl text-xs text-white font-mono outline-none"
-                      />
+                      <button
+                        type="button"
+                        onClick={fillTestCard}
+                        className="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold underline cursor-pointer"
+                      >
+                        ⚡ Rellenar tarjeta de prueba Stripe
+                      </button>
                     </div>
+                    <input
+                      type="text"
+                      maxLength={19}
+                      placeholder="4242 4242 4242 4242"
+                      value={cardNumber}
+                      onChange={e => handleCardNumberChange(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-zinc-900 border border-zinc-700 rounded-xl text-xs text-white font-mono outline-none focus:border-emerald-500 tracking-wider"
+                    />
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="text-[11px] font-bold text-zinc-400 block mb-1">
-                          Vencimiento
+                          Vencimiento (MM/AA) *
                         </label>
                         <input
                           type="text"
-                          placeholder="MM/AA"
+                          maxLength={5}
+                          placeholder="12/28"
                           value={cardExp}
-                          onChange={e => setCardExp(e.target.value)}
-                          className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-xl text-xs text-white font-mono outline-none"
+                          onChange={e => handleExpChange(e.target.value)}
+                          className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-xl text-xs text-white font-mono outline-none focus:border-emerald-500"
                         />
                       </div>
 
                       <div>
                         <label className="text-[11px] font-bold text-zinc-400 block mb-1">
-                          CVC / CVV
+                          CVC / CVV *
                         </label>
                         <input
-                          type="text"
+                          type="password"
+                          maxLength={4}
                           placeholder="123"
                           value={cardCvc}
-                          onChange={e => setCardCvc(e.target.value)}
-                          className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-xl text-xs text-white font-mono outline-none"
+                          onChange={e => handleCvcChange(e.target.value)}
+                          className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-xl text-xs text-white font-mono outline-none focus:border-emerald-500"
                         />
                       </div>
                     </div>
