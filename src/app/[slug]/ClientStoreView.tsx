@@ -20,6 +20,11 @@ import {
   Share2,
   Check,
   Search,
+  Play,
+  FileText,
+  Download,
+  Video,
+  X,
 } from 'lucide-react';
 
 interface ClientStoreViewProps {
@@ -49,6 +54,10 @@ export function ClientStoreView({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [menuSearch, setMenuSearch] = useState('');
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [customerMenuViewMode, setCustomerMenuViewMode] = useState<'interactive' | 'pdf'>(
+    business.menuDisplayMode === 'pdf' ? 'pdf' : 'interactive'
+  );
+  const [activeVideoModal, setActiveVideoModal] = useState<{ name: string; url: string } | null>(null);
 
   // Check URL param ?tab=menu on mount
   React.useEffect(() => {
@@ -351,112 +360,240 @@ export function ClientStoreView({
         {/* TAB 2: DIGITAL MENU & WHATSAPP ORDERS */}
         {activeTab === 'menu' && (
           <div className="space-y-4">
-            {/* Search Input for Menu */}
-            <div className="relative">
-              <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Buscar platillo, bebida o ingrediente..."
-                value={menuSearch}
-                onChange={e => setMenuSearch(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
-              />
-            </div>
-
-            {/* Category pills */}
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-              {categories.map(cat => (
+            {/* Top Mode Switcher if PDF is uploaded */}
+            {business.menuPdfUrl && business.menuDisplayMode !== 'interactive' && (
+              <div className="flex bg-zinc-900 border border-zinc-800 rounded-2xl p-1 gap-1">
                 <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
-                    selectedCategory === cat
-                      ? 'bg-amber-500 text-zinc-950'
-                      : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
+                  type="button"
+                  onClick={() => setCustomerMenuViewMode('interactive')}
+                  className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                    customerMenuViewMode === 'interactive'
+                      ? 'bg-amber-500 text-zinc-950 shadow-md font-extrabold'
+                      : 'text-zinc-400 hover:text-white'
                   }`}
                 >
-                  {cat === 'all' ? 'Todos' : cat}
+                  <Utensils className="w-3.5 h-3.5" />
+                  <span>Carta Interactiva</span>
                 </button>
-              ))}
-            </div>
+                <button
+                  type="button"
+                  onClick={() => setCustomerMenuViewMode('pdf')}
+                  className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                    customerMenuViewMode === 'pdf'
+                      ? 'bg-amber-500 text-zinc-950 shadow-md font-extrabold'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Ver Carta en PDF</span>
+                </button>
+              </div>
+            )}
 
-            {/* Menu Items List */}
-            <div className="space-y-3">
-              {filteredItems.map(item => {
-                const qty = cart[item.id] || 0;
-                const isOutOfStock = !item.available;
-
-                return (
-                  <div
-                    key={item.id}
-                    className={`bg-zinc-900 border rounded-2xl p-3.5 flex gap-3.5 items-center justify-between transition-colors ${
-                      isOutOfStock ? 'border-zinc-850 opacity-60' : 'border-zinc-800 hover:border-zinc-700'
-                    }`}
-                  >
-                    {item.imageUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={item.imageUrl}
-                        alt={item.name}
-                        className="w-16 h-16 rounded-xl object-cover shrink-0"
-                      />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <h4 className="font-bold text-sm text-white truncate">{item.name}</h4>
-                        {item.featured && (
-                          <span className="text-[9px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-md border border-amber-500/30">
-                            Top
-                          </span>
-                        )}
-                        {isOutOfStock && (
-                          <span className="text-[9px] font-bold uppercase tracking-wider bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-md border border-red-500/30">
-                            Agotado
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-zinc-400 line-clamp-2 mt-0.5">
-                        {item.description}
-                      </p>
-                      <span className="text-sm font-extrabold text-amber-400 mt-1 block">
-                        {business.currency}
-                        {item.price}
-                      </span>
-                    </div>
-
-                    {/* Quantity controls */}
-                    {!isOutOfStock ? (
-                      <div className="flex items-center gap-1.5 bg-zinc-950 p-1 rounded-xl border border-zinc-800">
-                        {qty > 0 && (
-                          <>
-                            <button
-                              onClick={() => removeFromCart(item.id)}
-                              className="p-1.5 hover:bg-zinc-800 text-zinc-300 rounded-lg transition-colors"
-                            >
-                              <Minus className="w-3.5 h-3.5" />
-                            </button>
-                            <span className="text-xs font-bold px-1 text-white">{qty}</span>
-                          </>
-                        )}
-                        <button
-                          onClick={() => addToCart(item.id)}
-                          className="p-1.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 rounded-lg transition-colors font-bold"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-[10px] text-zinc-500 font-medium px-2 py-1 bg-zinc-950 rounded-lg border border-zinc-800">
-                        No disponible
-                      </span>
-                    )}
+            {/* IF PDF VIEW MODE IS ACTIVE */}
+            {customerMenuViewMode === 'pdf' && business.menuPdfUrl ? (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-5 shadow-xl space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-amber-400" />
+                    <span className="text-xs font-bold text-white truncate max-w-[200px]">
+                      {business.menuPdfName || 'Carta Oficial'}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
+                  <a
+                    href={business.menuPdfUrl}
+                    download={business.menuPdfName || 'carta.pdf'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-bold flex items-center gap-1"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Descargar</span>
+                  </a>
+                </div>
+
+                {/* PDF Frame */}
+                <div className="w-full h-[520px] rounded-2xl bg-zinc-950 border border-zinc-800 overflow-hidden flex items-center justify-center">
+                  {business.menuPdfUrl.endsWith('.pdf') ||
+                  business.menuPdfUrl.startsWith('data:application/pdf') ? (
+                    <iframe
+                      src={business.menuPdfUrl}
+                      title="Carta PDF"
+                      className="w-full h-full border-none"
+                    />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={business.menuPdfUrl}
+                      alt="Carta Diseñada"
+                      className="w-full h-full object-contain"
+                    />
+                  )}
+                </div>
+
+                <div className="pt-2 text-center">
+                  <a
+                    href={`https://wa.me/${business.whatsapp}?text=${encodeURIComponent(
+                      `¡Hola ${business.name}! 👋 He visto su carta en PDF y me gustaría hacer un pedido.`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span>¿Listo para ordenar? Escríbenos por WhatsApp</span>
+                  </a>
+                </div>
+              </div>
+            ) : (
+              /* INTERACTIVE ITEM-BY-ITEM MENU */
+              <>
+                {/* Search Input for Menu */}
+                <div className="relative">
+                  <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Buscar platillo, bebida o ingrediente..."
+                    value={menuSearch}
+                    onChange={e => setMenuSearch(e.target.value)}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  />
+                </div>
+
+                {/* Category pills */}
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                  {categories.map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+                        selectedCategory === cat
+                          ? 'bg-amber-500 text-zinc-950'
+                          : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
+                      }`}
+                    >
+                      {cat === 'all' ? 'Todos' : cat}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Menu Items List */}
+                <div className="space-y-3">
+                  {filteredItems.map(item => {
+                    const qty = cart[item.id] || 0;
+                    const isOutOfStock = !item.available;
+
+                    return (
+                      <div
+                        key={item.id}
+                        className={`bg-zinc-900 border rounded-2xl p-3.5 flex gap-3.5 items-center justify-between transition-colors ${
+                          isOutOfStock ? 'border-zinc-850 opacity-60' : 'border-zinc-800 hover:border-zinc-700'
+                        }`}
+                      >
+                        {item.imageUrl && (
+                          <div className="relative shrink-0">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={item.imageUrl}
+                              alt={item.name}
+                              className="w-16 h-16 rounded-xl object-cover"
+                            />
+                            {/* Video Pill on Image */}
+                            {item.videoUrl && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setActiveVideoModal({
+                                    name: item.name,
+                                    url: item.videoUrl!,
+                                  })
+                                }
+                                className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/80 hover:bg-black text-white text-[9px] font-bold flex items-center gap-1 shadow"
+                                title="Ver video del plato"
+                              >
+                                <Play className="w-2.5 h-2.5 text-emerald-400 fill-emerald-400" />
+                                <span>Video</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <h4 className="font-bold text-sm text-white truncate">{item.name}</h4>
+                            {item.featured && (
+                              <span className="text-[9px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-md border border-amber-500/30">
+                                Top
+                              </span>
+                            )}
+                            {isOutOfStock && (
+                              <span className="text-[9px] font-bold uppercase tracking-wider bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-md border border-red-500/30">
+                                Agotado
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-zinc-400 line-clamp-2 mt-0.5">
+                            {item.description}
+                          </p>
+
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-sm font-extrabold text-amber-400">
+                              {business.currency}
+                              {item.price}
+                            </span>
+
+                            {item.videoUrl && !item.imageUrl && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setActiveVideoModal({
+                                    name: item.name,
+                                    url: item.videoUrl!,
+                                  })
+                                }
+                                className="text-[10px] text-emerald-400 hover:underline flex items-center gap-1 font-bold"
+                              >
+                                <Play className="w-2.5 h-2.5 fill-current" />
+                                <span>Ver video</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Quantity controls */}
+                        {!isOutOfStock ? (
+                          <div className="flex items-center gap-1.5 bg-zinc-950 p-1 rounded-xl border border-zinc-800">
+                            {qty > 0 && (
+                              <>
+                                <button
+                                  onClick={() => removeFromCart(item.id)}
+                                  className="p-1.5 hover:bg-zinc-800 text-zinc-300 rounded-lg transition-colors"
+                                >
+                                  <Minus className="w-3.5 h-3.5" />
+                                </button>
+                                <span className="text-xs font-bold px-1 text-white">{qty}</span>
+                              </>
+                            )}
+                            <button
+                              onClick={() => addToCart(item.id)}
+                              className="p-1.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 rounded-lg transition-colors font-bold"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-zinc-500 font-medium px-2 py-1 bg-zinc-950 rounded-lg border border-zinc-800">
+                            No disponible
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
 
             {/* Sticky WhatsApp Checkout Bar when items in cart */}
-            {totalCartCount > 0 && (
+            {totalCartCount > 0 && customerMenuViewMode === 'interactive' && (
               <div className="fixed bottom-4 left-4 right-4 max-w-md mx-auto z-40">
                 <div className="bg-zinc-900 border border-amber-500/50 rounded-2xl p-3.5 shadow-2xl flex items-center justify-between backdrop-blur-xl">
                   <div>
@@ -539,6 +676,36 @@ export function ClientStoreView({
           </div>
         )}
       </main>
+
+      {/* Video Preview Modal */}
+      {activeVideoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150">
+          <div className="bg-zinc-950 border border-zinc-800 rounded-3xl max-w-sm w-full p-4 text-white shadow-2xl relative">
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-800 mb-3">
+              <span className="text-xs font-bold text-zinc-300 flex items-center gap-1.5 truncate">
+                <Video className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="truncate">{activeVideoModal.name}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setActiveVideoModal(null)}
+                className="p-1 rounded-full hover:bg-zinc-800 text-zinc-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="w-full aspect-video rounded-2xl overflow-hidden bg-black flex items-center justify-center">
+              <video
+                src={activeVideoModal.url}
+                controls
+                autoPlay
+                className="w-full h-full object-contain"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Printable Counter QR Modal */}
       <CounterQrModal

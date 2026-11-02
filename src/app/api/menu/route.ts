@@ -21,7 +21,17 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { businessId, name, description, price, category, imageUrl, available = true, featured = false } = body;
+    const {
+      businessId,
+      name,
+      description,
+      price,
+      category,
+      imageUrl,
+      videoUrl,
+      available = true,
+      featured = false,
+    } = body;
 
     if (!businessId || !name || price === undefined || !category) {
       return NextResponse.json(
@@ -37,6 +47,7 @@ export async function POST(request: Request) {
       price: Number(price),
       category,
       imageUrl: imageUrl || '',
+      videoUrl: videoUrl || '',
       available: Boolean(available),
       featured: Boolean(featured),
     });

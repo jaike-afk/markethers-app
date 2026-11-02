@@ -39,6 +39,9 @@ export interface Business {
   currency: string;
   loyaltyConfig: LoyaltyCardConfig;
   googleReviews: GoogleReviewConfig;
+  menuPdfUrl?: string;
+  menuPdfName?: string;
+  menuDisplayMode?: 'interactive' | 'pdf' | 'both';
 }
 
 export interface Customer {
@@ -78,6 +81,7 @@ export interface MenuItem {
   price: number;
   category: string;
   imageUrl?: string;
+  videoUrl?: string;
   available: boolean;
   featured?: boolean;
 }

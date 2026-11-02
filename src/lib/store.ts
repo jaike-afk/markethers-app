@@ -36,6 +36,9 @@ export const INITIAL_BUSINESSES: Business[] = [
       rewardForReview: '+1 Sello extra de regalo',
       smartFilterEnabled: true,
     },
+    menuPdfUrl: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=1200&q=80',
+    menuPdfName: 'Carta_Aroma_Cafe_Oficial.pdf',
+    menuDisplayMode: 'both',
   },
   {
     id: 'biz_barber_2',
@@ -181,6 +184,7 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     price: 65,
     category: 'Café de Especialidad',
     imageUrl: 'https://images.unsplash.com/photo-1577968897966-3d4325b36b61?auto=format&fit=crop&w=400&q=80',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
     available: true,
     featured: true,
   },
@@ -192,6 +196,7 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     price: 75,
     category: 'Café de Especialidad',
     imageUrl: 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=400&q=80',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4',
     available: true,
     featured: true,
   },
@@ -306,6 +311,13 @@ class DataStore {
 
   getBusinessById(id: string): Business | undefined {
     return this.businesses.find(b => b.id === id);
+  }
+
+  updateBusiness(id: string, updates: Partial<Business>): Business | null {
+    const index = this.businesses.findIndex(b => b.id === id);
+    if (index === -1) return null;
+    this.businesses[index] = { ...this.businesses[index], ...updates };
+    return this.businesses[index];
   }
 
   updateBusinessConfig(businessId: string, updates: Partial<Business>): Business | null {

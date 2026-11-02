@@ -8,6 +8,7 @@ import { AppleWalletCard } from '@/components/AppleWalletCard';
 import { CameraScanner } from '@/components/CameraScanner';
 import { CounterQrModal } from '@/components/CounterQrModal';
 import { GoogleReviewCard } from '@/components/GoogleReviewCard';
+import { MenuManager } from '@/components/MenuManager';
 import {
   LayoutDashboard,
   CreditCard,
@@ -933,44 +934,15 @@ export default function MarkethersAppPortal() {
           {/* VIEW: MENÚ DIGITAL                                        */}
           {/* ========================================================= */}
           {activeSection === 'menu' && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                <div>
-                  <h3 className="font-bold text-base text-slate-900">Menú Digital & Catálogo</h3>
-                  <p className="text-xs text-slate-500">
-                    Carta interactiva para que tus clientes consulten productos en mesa o redes.
-                  </p>
-                </div>
-                <Link
-                  href={`/${business.slug}?tab=menu`}
-                  target="_blank"
-                  className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl flex items-center gap-1.5"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Ver Menú Público</span>
-                </Link>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {menuItems.map(item => (
-                  <div
-                    key={item.id}
-                    className="p-3.5 border border-slate-200 rounded-xl bg-slate-50 flex items-center justify-between"
-                  >
-                    <div>
-                      <h4 className="font-bold text-xs text-slate-900">{item.name}</h4>
-                      <span className="text-[10px] text-slate-500 block">{item.category}</span>
-                      <span className="text-xs font-black text-emerald-600 block mt-1">
-                        ${item.price}
-                      </span>
-                    </div>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">
-                      Disponible
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <MenuManager
+              business={business}
+              menuItems={menuItems}
+              onUpdateBusiness={updated => {
+                setBusinesses(prev =>
+                  prev.map(b => (b.id === business.id ? { ...b, ...updated } : b))
+                );
+              }}
+            />
           )}
         </main>
       </div>
