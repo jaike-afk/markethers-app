@@ -12,7 +12,8 @@ interface GoogleReviewCardProps {
 }
 
 export function GoogleReviewCard({ business, mode = 'interactive' }: GoogleReviewCardProps) {
-  const { language } = useLanguage();
+  const { language, mounted } = useLanguage();
+  const activeLang = mounted ? language : 'es';
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [feedbackText, setFeedbackText] = useState('');
   const [submittedPrivate, setSubmittedPrivate] = useState(false);
@@ -21,7 +22,7 @@ export function GoogleReviewCard({ business, mode = 'interactive' }: GoogleRevie
     googleRating: 4.9,
     totalReviews: 240,
     googleReviewUrl: `https://search.google.com/local/writereview?placeid=${business.slug}`,
-    rewardForReview: language === 'es' ? '+1 Sello extra de regalo' : '+1 Bonus stamp reward',
+    rewardForReview: activeLang === 'es' ? '+1 Sello extra de regalo' : '+1 Bonus stamp reward',
   };
 
   const handleStarClick = (rating: number) => {
@@ -38,7 +39,7 @@ export function GoogleReviewCard({ business, mode = 'interactive' }: GoogleRevie
     e.preventDefault();
     if (!feedbackText.trim()) return;
 
-    const message = `*${language === 'es' ? 'Feedback Privado de Cliente' : 'Private Customer Feedback'} (${selectedRating} ⭐)*\n\n"${feedbackText}"\n\n${language === 'es' ? 'Negocio' : 'Business'}: ${business.name}`;
+    const message = `*${activeLang === 'es' ? 'Feedback Privado de Cliente' : 'Private Customer Feedback'} (${selectedRating} ⭐)*\n\n"${feedbackText}"\n\n${activeLang === 'es' ? 'Negocio' : 'Business'}: ${business.name}`;
     window.open(`https://wa.me/${business.whatsapp}?text=${encodeURIComponent(message)}`, '_blank');
     setSubmittedPrivate(true);
   };
@@ -71,7 +72,7 @@ export function GoogleReviewCard({ business, mode = 'interactive' }: GoogleRevie
           </div>
           <div>
             <h4 className="font-bold text-sm text-slate-900 leading-tight">
-              {language === 'es' ? 'Reseñas en Google' : 'Google Reviews'}
+              {activeLang === 'es' ? 'Reseñas en Google' : 'Google Reviews'}
             </h4>
             <span className="text-[11px] text-slate-500">{business.name}</span>
           </div>
@@ -88,12 +89,12 @@ export function GoogleReviewCard({ business, mode = 'interactive' }: GoogleRevie
       {/* Main Interactive Star Filter */}
       <div className="py-6 text-center">
         <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
-          {language === 'es'
+          {activeLang === 'es'
             ? '¿Cómo calificarías tu experiencia hoy?'
             : 'How would you rate your experience today?'}
         </span>
         <p className="text-sm font-semibold text-slate-900 mb-4">
-          {language === 'es' ? 'Toca una estrella para calificar' : 'Tap a star to rate'}
+          {activeLang === 'es' ? 'Toca una estrella para calificar' : 'Tap a star to rate'}
         </p>
 
         {/* 5 Stars Selector */}
@@ -121,7 +122,7 @@ export function GoogleReviewCard({ business, mode = 'interactive' }: GoogleRevie
           <div className="mt-4 inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-full text-[11px] font-bold">
             <Heart className="w-3.5 h-3.5 fill-emerald-500 text-emerald-600" />
             <span>
-              {language === 'es' ? 'Incentivo:' : 'Reward:'} {googleConfig.rewardForReview}
+              {activeLang === 'es' ? 'Incentivo:' : 'Reward:'} {googleConfig.rewardForReview}
             </span>
           </div>
         )}
@@ -136,13 +137,13 @@ export function GoogleReviewCard({ business, mode = 'interactive' }: GoogleRevie
               <div className="flex items-center justify-center gap-1 text-emerald-700 font-bold text-xs">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                 <span>
-                  {language === 'es'
+                  {activeLang === 'es'
                     ? `¡Muchas gracias por tus ${selectedRating} estrellas!`
                     : `Thank you so much for your ${selectedRating} stars!`}
                 </span>
               </div>
               <p className="text-xs text-slate-600">
-                {language === 'es'
+                {activeLang === 'es'
                   ? 'Tu opinión nos ayuda muchísimo a seguir creciendo. Se abrirá la ficha oficial de Google Maps para publicar tu reseña.'
                   : 'Your feedback means the world to us! Opening our official Google Maps listing to share your rating.'}
               </p>
@@ -152,7 +153,7 @@ export function GoogleReviewCard({ business, mode = 'interactive' }: GoogleRevie
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 w-full py-2.5 bg-[#22c55e] hover:bg-emerald-600 text-white font-extrabold text-xs rounded-xl shadow-md transition-all"
               >
-                <span>{language === 'es' ? 'Abrir Google Maps y Publicar' : 'Open Google Maps & Publish'}</span>
+                <span>{activeLang === 'es' ? 'Abrir Google Maps y Publicar' : 'Open Google Maps & Publish'}</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
@@ -164,13 +165,13 @@ export function GoogleReviewCard({ business, mode = 'interactive' }: GoogleRevie
                   <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
                     <ShieldCheck className="w-4 h-4 text-amber-700" />
                     <span>
-                      {language === 'es'
+                      {activeLang === 'es'
                         ? 'Lamentamos que tu experiencia no haya sido perfecta'
                         : 'We are sorry your experience was not perfect'}
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-600">
-                    {language === 'es'
+                    {activeLang === 'es'
                       ? 'Tu opinión es muy importante para el dueño del negocio. Cuéntanos qué falló para solucionarlo de inmediato:'
                       : 'Your voice matters to the store owner. Tell us what fell short so we can make it right immediately:'}
                   </p>
@@ -179,7 +180,7 @@ export function GoogleReviewCard({ business, mode = 'interactive' }: GoogleRevie
                     value={feedbackText}
                     onChange={e => setFeedbackText(e.target.value)}
                     placeholder={
-                      language === 'es'
+                      activeLang === 'es'
                         ? 'Escribe tu mensaje privado aquí...'
                         : 'Type your private feedback here...'
                     }
@@ -192,7 +193,7 @@ export function GoogleReviewCard({ business, mode = 'interactive' }: GoogleRevie
                   >
                     <MessageCircle className="w-3.5 h-3.5" />
                     <span>
-                      {language === 'es'
+                      {activeLang === 'es'
                         ? 'Enviar Feedback Directo al Dueño'
                         : 'Send Direct Message to Owner'}
                     </span>
@@ -202,7 +203,7 @@ export function GoogleReviewCard({ business, mode = 'interactive' }: GoogleRevie
                 <div className="text-center py-2 text-xs font-bold text-emerald-800 flex items-center justify-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                   <span>
-                    {language === 'es'
+                    {activeLang === 'es'
                       ? 'Mensaje enviado. ¡Nos pondremos en contacto contigo!'
                       : 'Feedback sent. We will get in touch with you!'}
                   </span>

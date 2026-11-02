@@ -47,8 +47,9 @@ import {
 } from 'lucide-react';
 
 export default function HomePage() {
-  const { language, setLanguage } = useLanguage();
-  const t = translations[language];
+  const { language, setLanguage, mounted } = useLanguage();
+  const activeLang = mounted ? language : 'es';
+  const t = translations[activeLang];
 
   const [interactiveStamps, setInteractiveStamps] = useState(6);
   const [roiCustomersPerDay, setRoiCustomersPerDay] = useState(75);
@@ -70,40 +71,40 @@ export default function HomePage() {
 
   const industriesData = {
     cafe: {
-      title: language === 'es' ? 'Cafeterías, Reposterías & Brunch' : 'Cafes, Bakeries & Brunch',
+      title: activeLang === 'es' ? 'Cafeterías, Reposterías & Brunch' : 'Cafes, Bakeries & Brunch',
       example:
-        language === 'es'
+        activeLang === 'es'
           ? 'Por cada 8 bebidas o desayunos consumidos, el 9º café de especialidad es gratis.'
           : 'For every 8 specialty drinks or meals ordered, the 9th specialty coffee is on the house.',
-      result: language === 'es' ? '+34% de visitas recurrentes entre semana.' : '+34% repeat weekday visits.',
+      result: activeLang === 'es' ? '+34% de visitas recurrentes entre semana.' : '+34% repeat weekday visits.',
       icon: '☕',
-      badge: language === 'es' ? 'El programa más popular' : 'Most popular loyalty format',
+      badge: activeLang === 'es' ? 'El programa más popular' : 'Most popular loyalty format',
     },
     barber: {
-      title: language === 'es' ? 'Barberías, Salones & Spas' : 'Barbershops, Salons & Spas',
+      title: activeLang === 'es' ? 'Barberías, Salones & Spas' : 'Barbershops, Salons & Spas',
       example:
-        language === 'es'
+        activeLang === 'es'
           ? 'En tu 5to corte de cabello, recibe un ritual de barba o tratamiento capilar sin costo.'
           : 'On your 5th haircut, receive a complimentary beard grooming ritual or scalp treatment.',
       result:
-        language === 'es'
+        activeLang === 'es'
           ? 'El 82% de los clientes vuelve antes de 21 días para no perder su racha.'
           : '82% of clients rebook within 21 days to maintain their loyalty streak.',
       icon: '💈',
-      badge: language === 'es' ? 'Citas recurrentes automáticas' : 'Automatic repeat bookings',
+      badge: activeLang === 'es' ? 'Citas recurrentes automáticas' : 'Automatic repeat bookings',
     },
     restaurant: {
-      title: language === 'es' ? 'Hamburgueserías, Pizzerías & Bares' : 'Burger Spots, Pizzerias & Bistros',
+      title: activeLang === 'es' ? 'Hamburgueserías, Pizzerías & Bares' : 'Burger Spots, Pizzerias & Bistros',
       example:
-        language === 'es'
+        activeLang === 'es'
           ? 'Suma 6 pedidos o visitas y llévate una hamburguesa deluxe o postre de la casa.'
           : 'Collect 6 visits or WhatsApp orders and unlock a free craft burger or house dessert.',
       result:
-        language === 'es'
+        activeLang === 'es'
           ? '+45% pedidos directos por WhatsApp sin comisiones de delivery.'
           : '+45% direct WhatsApp orders with 0% third-party delivery commissions.',
       icon: '🍔',
-      badge: language === 'es' ? 'Cero comisiones a apps terceras' : 'Zero third-party commissions',
+      badge: activeLang === 'es' ? 'Cero comisiones a apps terceras' : 'Zero third-party commissions',
     },
   };
 

@@ -24,8 +24,9 @@ interface AppleWalletCardProps {
 }
 
 export function AppleWalletCard({ business, customer, onRefresh }: AppleWalletCardProps) {
-  const { language } = useLanguage();
-  const isEn = language === 'en';
+  const { language, mounted } = useLanguage();
+  const activeLang = mounted ? language : 'es';
+  const isEn = activeLang === 'en';
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [isFlipped, setIsFlipped] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);

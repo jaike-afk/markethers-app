@@ -9,6 +9,7 @@ interface LanguageContextType {
   setLanguage: (lang: Language) => void;
   toggleLanguage: () => void;
   isEn: boolean;
+  mounted: boolean;
 }
 
 const LanguageContext = createContext<LanguageContextType>({
@@ -16,31 +17,32 @@ const LanguageContext = createContext<LanguageContextType>({
   setLanguage: () => {},
   toggleLanguage: () => {},
   isEn: false,
+  mounted: false,
 });
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>('es');
+  const [mounted, setMounted] = useState(false);
 
-  // Load persisted language preference on mount
+  // Sync after mount on client to avoid React hydration mismatch
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    setMounted(true);
+    try {
       const stored = localStorage.getItem('markethers_lang') as Language;
       if (stored === 'es' || stored === 'en') {
         setLanguageState(stored);
-      } else {
-        // Detect browser language
-        const browserLang = navigator.language.slice(0, 2);
-        if (browserLang === 'en') {
-          setLanguageState('en');
-        }
       }
+    } catch {
+      // Ignore localStorage issues
     }
   }, []);
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    if (typeof window !== 'undefined') {
+    try {
       localStorage.setItem('markethers_lang', lang);
+    } catch {
+      // Ignore
     }
   };
 
@@ -54,7 +56,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         language,
         setLanguage,
         toggleLanguage,
-        isEn: language === 'en',
+        isEn: (mounted ? language : 'es') === 'en',
+        mounted,
       }}
     >
       {children}

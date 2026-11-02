@@ -26,8 +26,9 @@ import {
 } from 'lucide-react';
 
 export function DigitalMenuShowcase() {
-  const { language } = useLanguage();
-  const t = translations[language].menuSpotlight;
+  const { language, mounted } = useLanguage();
+  const activeLang = mounted ? language : 'es';
+  const t = translations[activeLang].menuSpotlight;
 
   const [activeTab, setActiveTab] = useState<'upload' | 'platform'>('upload');
 
@@ -40,24 +41,24 @@ export function DigitalMenuShowcase() {
   const [demoItems, setDemoItems] = useState([
     {
       id: '1',
-      name: language === 'es' ? 'Flat White Especialidad' : 'Specialty Flat White',
-      category: language === 'es' ? 'Cafés' : 'Coffee',
+      name: activeLang === 'es' ? 'Flat White Especialidad' : 'Specialty Flat White',
+      category: activeLang === 'es' ? 'Cafés' : 'Coffee',
       price: 65,
       available: true,
       icon: '☕',
     },
     {
       id: '2',
-      name: language === 'es' ? 'Avocado Toast & Huevo' : 'Avocado Toast & Egg',
-      category: language === 'es' ? 'Desayunos' : 'Brunch',
+      name: activeLang === 'es' ? 'Avocado Toast & Huevo' : 'Avocado Toast & Egg',
+      category: activeLang === 'es' ? 'Desayunos' : 'Brunch',
       price: 135,
       available: true,
       icon: '🥑',
     },
     {
       id: '3',
-      name: language === 'es' ? 'Croissant de Almendras' : 'Almond Croissant',
-      category: language === 'es' ? 'Panadería' : 'Pastry',
+      name: activeLang === 'es' ? 'Croissant de Almendras' : 'Almond Croissant',
+      category: activeLang === 'es' ? 'Panadería' : 'Pastry',
       price: 55,
       available: false, // demonstrates Sold Out toggle
       icon: '🥐',

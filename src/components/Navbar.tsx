@@ -22,8 +22,9 @@ export function Navbar() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [storesOpen, setStoresOpen] = useState(false);
-  const { language, setLanguage } = useLanguage();
-  const t = translations[language].nav;
+  const { language, setLanguage, mounted } = useLanguage();
+  const activeLang = mounted ? language : 'es';
+  const t = translations[activeLang].nav;
 
   // When on the dedicated /app panel, hide the landing page navbar
   if (pathname === '/app') {
@@ -31,8 +32,8 @@ export function Navbar() {
   }
 
   const sampleStores = [
-    { name: language === 'es' ? 'Café Aroma (Especialidad)' : 'Café Aroma (Specialty)', slug: 'aroma-cafe', icon: '☕' },
-    { name: language === 'es' ? 'Barber King (Barbería)' : 'Barber King (Barbershop)', slug: 'barber-king', icon: '💈' },
+    { name: activeLang === 'es' ? 'Café Aroma (Especialidad)' : 'Café Aroma (Specialty)', slug: 'aroma-cafe', icon: '☕' },
+    { name: activeLang === 'es' ? 'Barber King (Barbería)' : 'Barber King (Barbershop)', slug: 'barber-king', icon: '💈' },
     { name: 'Craft Burger Lab', slug: 'burger-craft', icon: '🍔' },
   ];
 
@@ -53,7 +54,10 @@ export function Navbar() {
                 Wallet SaaS
               </span>
             </div>
-            <span className="text-[10px] text-zinc-400 -mt-0.5 block">
+            <span
+              className="text-[10px] text-zinc-400 -mt-0.5 block"
+              suppressHydrationWarning
+            >
               {t.brandSubtitle}
             </span>
           </div>
