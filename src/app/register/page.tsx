@@ -246,10 +246,10 @@ function RegisterForm() {
                         onChange={e => setBusinessCategory(e.target.value)}
                         className="w-full px-3 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white outline-none"
                       >
-                        <option value="Restaurante & Bar">Restaurante & Bar</option>
+                        <option value="Restaurantes & Bares">Restaurantes & Bares</option>
+                        <option value="Paleterías & Heladerías">Paleterías & Heladerías</option>
                         <option value="Cafetería & Brunch">Cafetería & Brunch</option>
                         <option value="Barbería & Salón">Barbería & Salón</option>
-                        <option value="Hamburguesería & Pizzería">Hamburguesería & Pizzería</option>
                         <option value="Postres & Panadería">Postres & Panadería</option>
                         <option value="Otro">Otro Comercio Local</option>
                       </select>

@@ -35,7 +35,7 @@ export function Navbar() {
   const sampleStores = [
     { name: activeLang === 'es' ? 'Café Aroma (Especialidad)' : 'Café Aroma (Specialty)', slug: 'aroma-cafe', icon: '☕' },
     { name: activeLang === 'es' ? 'Barber King (Barbería)' : 'Barber King (Barbershop)', slug: 'barber-king', icon: '💈' },
-    { name: 'Craft Burger Lab', slug: 'burger-craft', icon: '🍔' },
+    { name: 'Habibi Bar Cantina (Restaurante & Bar)', slug: 'habibi-bar', icon: '🍸' },
   ];
 
   return (

@@ -97,17 +97,17 @@ export default function HomePage() {
       badge: activeLang === 'es' ? 'Citas recurrentes automáticas' : 'Automatic repeat bookings',
     },
     restaurant: {
-      title: activeLang === 'es' ? 'Hamburgueserías, Pizzerías & Bares' : 'Burger Spots, Pizzerias & Bistros',
+      title: activeLang === 'es' ? 'Paleterías, Restaurantes & Bares' : 'Popsicle & Ice Cream Shops, Restaurants & Bars',
       example:
         activeLang === 'es'
-          ? 'Suma 6 pedidos o visitas y llévate una hamburguesa deluxe o postre de la casa.'
-          : 'Collect 6 visits or WhatsApp orders and unlock a free craft burger or house dessert.',
+          ? 'Suma 6 visitas o consumos y llévate una paleta artesanal doble, trago o postre de la casa.'
+          : 'Collect 6 visits or purchases and unlock a free artisan popsicle, drink or house dessert.',
       result:
         activeLang === 'es'
-          ? '+45% pedidos directos por WhatsApp sin comisiones de delivery.'
-          : '+45% direct WhatsApp orders with 0% third-party delivery commissions.',
-      icon: '🍔',
-      badge: activeLang === 'es' ? 'Cero comisiones a apps terceras' : 'Zero third-party commissions',
+          ? '+45% de clientes frecuentes y mayor ticket promedio en mostrador.'
+          : '+45% repeat customers and higher average spend at checkout.',
+      icon: '🍦',
+      badge: activeLang === 'es' ? 'Fidelización directa en mostrador' : 'Direct in-store loyalty',
     },
   };
 
