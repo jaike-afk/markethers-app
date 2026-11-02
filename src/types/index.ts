@@ -153,3 +153,20 @@ export interface EmailCampaign {
   sentAt: string;
   templateType: string;
 }
+
+export interface TrackedQRCode {
+  id: string;
+  businessId: string;
+  name: string;
+  type: 'menu' | 'loyalty' | 'reviews' | 'infolink' | 'table';
+  targetUrl: string;
+  location?: string;
+  tableNumber?: string;
+  scansCount: number;
+  scansToday: number;
+  lastScannedAt?: string;
+  createdAt: string;
+  color?: string;
+  notes?: string;
+  isActive?: boolean;
+}

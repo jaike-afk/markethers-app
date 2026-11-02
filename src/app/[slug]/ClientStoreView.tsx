@@ -59,12 +59,48 @@ export function ClientStoreView({
   );
   const [activeVideoModal, setActiveVideoModal] = useState<{ name: string; url: string } | null>(null);
 
-  // Check URL param ?tab=menu on mount
+  // Check URL params on mount (?tab=menu, ?tab=card, ?qr=..., ?table=...)
+  const [tableNumber, setTableNumber] = useState<string | null>(null);
+
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      if (params.get('tab') === 'menu') {
+      const tabParam = params.get('tab');
+      if (tabParam === 'menu') {
         setActiveTab('menu');
+      } else if (tabParam === 'card' || tabParam === 'afiliacion' || tabParam === 'lealtad') {
+        setActiveTab('card');
+      } else if (tabParam === 'info') {
+        setActiveTab('info');
+      }
+
+      const tableParam = params.get('table');
+      if (tableParam) {
+        setTableNumber(tableParam);
+      }
+
+      // Track QR scan live in database
+      const qrId = params.get('qr');
+      if (qrId) {
+        try {
+          const storedQRs = JSON.parse(localStorage.getItem('markethers_tracked_qrs_db') || '[]');
+          if (Array.isArray(storedQRs) && storedQRs.length > 0) {
+            const updated = storedQRs.map((qr: any) => {
+              if (qr.id === qrId) {
+                return {
+                  ...qr,
+                  scansCount: (qr.scansCount || 0) + 1,
+                  scansToday: (qr.scansToday || 0) + 1,
+                  lastScannedAt: new Date().toISOString(),
+                };
+              }
+              return qr;
+            });
+            localStorage.setItem('markethers_tracked_qrs_db', JSON.stringify(updated));
+          }
+        } catch (e) {
+          console.error('Error tracking QR scan:', e);
+        }
       }
     }
   }, []);
@@ -171,6 +207,12 @@ export function ClientStoreView({
         <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
           {business.name}
         </h1>
+        {tableNumber && (
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 text-xs font-extrabold my-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Mesa {tableNumber}</span>
+          </div>
+        )}
         <p className="text-xs text-amber-400 font-medium mt-0.5">{business.tagline}</p>
         <p className="text-xs text-zinc-400 mt-1 max-w-sm mx-auto leading-relaxed">
           {business.description}

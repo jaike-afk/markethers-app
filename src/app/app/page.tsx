@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { INITIAL_BUSINESSES, INITIAL_CUSTOMERS, INITIAL_MENU_ITEMS, INITIAL_TRANSACTIONS, INITIAL_SALES, INITIAL_MERCHANT_CLIENTS, INITIAL_EMAIL_CAMPAIGNS } from '@/lib/store';
-import { Business, Customer, MenuItem, StampTransaction, SaleRecord, MerchantClientAccount, EmailCampaign } from '@/types';
+import { INITIAL_BUSINESSES, INITIAL_CUSTOMERS, INITIAL_MENU_ITEMS, INITIAL_TRANSACTIONS, INITIAL_SALES, INITIAL_MERCHANT_CLIENTS, INITIAL_EMAIL_CAMPAIGNS, INITIAL_TRACKED_QRS } from '@/lib/store';
+import { Business, Customer, MenuItem, StampTransaction, SaleRecord, MerchantClientAccount, EmailCampaign, TrackedQRCode } from '@/types';
+import QRCode from 'qrcode';
 import { getCurrentUser, logoutUser, UserAccount, isOwnerUser } from '@/lib/auth';
 import { AppleWalletCard } from '@/components/AppleWalletCard';
 import { CameraScanner } from '@/components/CameraScanner';
@@ -75,6 +76,8 @@ import {
   CheckCheck,
   FileSpreadsheet,
   SendHorizontal,
+  Trash2,
+  MapPin,
 } from 'lucide-react';
 
 export default function MarkethersAppPortal() {
@@ -103,6 +106,7 @@ export default function MarkethersAppPortal() {
     | 'ventas'
     | 'tarjetas'
     | 'clientes'
+    | 'qr_studio'
     | 'escaner'
     | 'historial'
     | 'push'
@@ -117,6 +121,21 @@ export default function MarkethersAppPortal() {
     | 'infolink'
     | 'facturacion'
   >('panel');
+
+  // Tracked QR Codes & Real-Time Scan Analytics State
+  const [trackedQrs, setTrackedQrs] = useState<TrackedQRCode[]>(INITIAL_TRACKED_QRS);
+  const [qrFilterType, setQrFilterType] = useState<'all' | 'menu' | 'loyalty' | 'table' | 'reviews'>('all');
+  const [qrSearchQuery, setQrSearchQuery] = useState('');
+  const [isCreateQrModalOpen, setIsCreateQrModalOpen] = useState(false);
+  const [selectedTrackedQrForModal, setSelectedTrackedQrForModal] = useState<TrackedQRCode | null>(null);
+  const [modalRenderedQrDataUrl, setModalRenderedQrDataUrl] = useState<string>('');
+
+  // Form State for Creating New Tracked QR
+  const [newQrName, setNewQrName] = useState('');
+  const [newQrType, setNewQrType] = useState<'menu' | 'loyalty' | 'table' | 'reviews'>('menu');
+  const [newQrLocation, setNewQrLocation] = useState('Mesas');
+  const [newQrTableNumber, setNewQrTableNumber] = useState('');
+  const [newQrNotes, setNewQrNotes] = useState('');
 
   // Master SaaS Merchant Portfolio & Technical Support Impersonation State
   const [merchantClients, setMerchantClients] = useState<MerchantClientAccount[]>(INITIAL_MERCHANT_CLIENTS);
@@ -436,6 +455,18 @@ export default function MarkethersAppPortal() {
         }
       } else {
         localStorage.setItem('markethers_email_campaigns_db', JSON.stringify(INITIAL_EMAIL_CAMPAIGNS));
+      }
+
+      // Load or initialize Tracked QRs DB
+      const storedTrackedQrs = localStorage.getItem('markethers_tracked_qrs_db');
+      if (storedTrackedQrs) {
+        try {
+          setTrackedQrs(JSON.parse(storedTrackedQrs));
+        } catch {
+          setTrackedQrs(INITIAL_TRACKED_QRS);
+        }
+      } else {
+        localStorage.setItem('markethers_tracked_qrs_db', JSON.stringify(INITIAL_TRACKED_QRS));
       }
 
       setCurrentTimestamp(Date.now());
@@ -1027,6 +1058,152 @@ Contacto y Soporte: soporte@markethers.com
 
   const todayFormatted = 'domingo, 1 de noviembre';
 
+  // Real-Time Analytics & Computed Stats for Tracked QRs
+  const businessTrackedQrs = trackedQrs.filter(q => q.businessId === business.id);
+  const totalQrScans = businessTrackedQrs.reduce((sum, q) => sum + (q.scansCount || 0), 0);
+  const totalQrScansToday = businessTrackedQrs.reduce((sum, q) => sum + (q.scansToday || 0), 0);
+  const totalMenuScans = businessTrackedQrs
+    .filter(q => q.type === 'menu' || q.type === 'table')
+    .reduce((sum, q) => sum + (q.scansCount || 0), 0);
+  const totalLoyaltyScans = businessTrackedQrs
+    .filter(q => q.type === 'loyalty')
+    .reduce((sum, q) => sum + (q.scansCount || 0), 0);
+  const topScannedQr = [...businessTrackedQrs].sort((a, b) => (b.scansCount || 0) - (a.scansCount || 0))[0] || null;
+
+  const filteredTrackedQrs = businessTrackedQrs.filter(qr => {
+    if (qrFilterType !== 'all' && qr.type !== qrFilterType) return false;
+    if (qrSearchQuery.trim()) {
+      const q = qrSearchQuery.toLowerCase();
+      const matchName = qr.name.toLowerCase().includes(q);
+      const matchLocation = qr.location?.toLowerCase().includes(q) || false;
+      const matchTable = qr.tableNumber?.toLowerCase().includes(q) || false;
+      const matchNotes = qr.notes?.toLowerCase().includes(q) || false;
+      return matchName || matchLocation || matchTable || matchNotes;
+    }
+    return true;
+  });
+
+  const handleCreateTrackedQr = () => {
+    if (!newQrName.trim()) return;
+
+    const newId = `qr-${Date.now().toString(36)}`;
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://markethers.vercel.app';
+
+    let targetUrl = `${origin}/${business.slug}?qr=${newId}`;
+    if (newQrType === 'menu') {
+      targetUrl += `&tab=menu`;
+    } else if (newQrType === 'loyalty') {
+      targetUrl += `&tab=card`;
+    } else if (newQrType === 'table') {
+      targetUrl += `&tab=menu`;
+      if (newQrTableNumber.trim()) {
+        targetUrl += `&table=${encodeURIComponent(newQrTableNumber.trim())}`;
+      }
+    } else if (newQrType === 'reviews') {
+      targetUrl += `&tab=info`;
+    }
+
+    const newTrackedQr: TrackedQRCode = {
+      id: newId,
+      businessId: business.id,
+      name: newQrName.trim(),
+      type: newQrType,
+      targetUrl,
+      location: newQrLocation.trim() || undefined,
+      tableNumber: newQrTableNumber.trim() || undefined,
+      scansCount: 0,
+      scansToday: 0,
+      createdAt: new Date().toISOString(),
+      notes: newQrNotes.trim() || undefined,
+      isActive: true,
+    };
+
+    const updated = [newTrackedQr, ...trackedQrs];
+    setTrackedQrs(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('markethers_tracked_qrs_db', JSON.stringify(updated));
+    }
+
+    setNewQrName('');
+    setNewQrType('menu');
+    setNewQrLocation('Mesas');
+    setNewQrTableNumber('');
+    setNewQrNotes('');
+    setIsCreateQrModalOpen(false);
+
+    setCopyToast(`¡Código QR "${newTrackedQr.name}" generado exitosamente!`);
+    setTimeout(() => setCopyToast(null), 3500);
+  };
+
+  const handleSimulateScan = (qrId: string) => {
+    const updated = trackedQrs.map(qr => {
+      if (qr.id === qrId) {
+        return {
+          ...qr,
+          scansCount: (qr.scansCount || 0) + 1,
+          scansToday: (qr.scansToday || 0) + 1,
+          lastScannedAt: new Date().toISOString(),
+        };
+      }
+      return qr;
+    });
+    setTrackedQrs(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('markethers_tracked_qrs_db', JSON.stringify(updated));
+    }
+    const found = updated.find(q => q.id === qrId);
+    setCopyToast(`¡Visita registrada! Escaneo contabilizado en "${found?.name || 'QR'}" (+1 visita)`);
+    setTimeout(() => setCopyToast(null), 3500);
+  };
+
+  const handleDeleteTrackedQr = (qrId: string) => {
+    if (typeof window !== 'undefined' && !window.confirm('¿Seguro que deseas eliminar este código QR de tu catálogo?')) {
+      return;
+    }
+    const updated = trackedQrs.filter(q => q.id !== qrId);
+    setTrackedQrs(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('markethers_tracked_qrs_db', JSON.stringify(updated));
+    }
+    setCopyToast('Código QR eliminado de tu catálogo');
+    setTimeout(() => setCopyToast(null), 3000);
+  };
+
+  const handleOpenQrStandModal = async (qr: TrackedQRCode) => {
+    setSelectedTrackedQrForModal(qr);
+    try {
+      const dataUrl = await QRCode.toDataURL(qr.targetUrl, {
+        width: 600,
+        margin: 2,
+        color: {
+          dark: '#0f172a',
+          light: '#ffffff',
+        },
+      });
+      setModalRenderedQrDataUrl(dataUrl);
+    } catch (e) {
+      console.error('Error rendering QR data URL for stand modal:', e);
+    }
+  };
+
+  const handleQuickCreateMenuQr = () => {
+    setNewQrName('Menú Digital Principal');
+    setNewQrType('menu');
+    setNewQrLocation('Comedor Principal');
+    setNewQrTableNumber('');
+    setNewQrNotes('Código QR para consultar la carta y platos');
+    setIsCreateQrModalOpen(true);
+  };
+
+  const handleQuickCreateLoyaltyQr = () => {
+    setNewQrName('Plan de Afiliación & Tarjeta Wallet');
+    setNewQrType('loyalty');
+    setNewQrLocation('Caja / Mostrador');
+    setNewQrTableNumber('');
+    setNewQrNotes('Código QR para que los clientes se afilien a Apple & Google Wallet');
+    setIsCreateQrModalOpen(true);
+  };
+
   const handleOpenQr = (type: 'counter' | 'menu' | 'discount' | 'reviews' | 'infolink') => {
     setQrModalType(type);
     setIsQrModalOpen(true);
@@ -1588,6 +1765,26 @@ Contacto y Soporte: soporte@markethers.com
 
             {marketingOpen && (
               <div className="space-y-0.5 mt-1">
+                <button
+                  onClick={() => {
+                    setActiveSection('qr_studio');
+                    setMobileSidebarOpen(false);
+                  }}
+                  className={`w-full py-2.5 px-3 rounded-xl flex items-center justify-between text-xs font-bold transition-all mb-1 ${
+                    activeSection === 'qr_studio'
+                      ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/30'
+                      : 'text-indigo-400 hover:text-white hover:bg-indigo-950/40 border border-indigo-500/20'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <QrCode className="w-4 h-4 text-indigo-300 stroke-[2.5]" />
+                    <span>Estudio de QRs & Visitas</span>
+                  </div>
+                  <span className="text-[10px] font-black bg-indigo-950/80 text-indigo-300 px-1.5 py-0.5 rounded border border-indigo-500/40">
+                    {totalQrScans} visitas
+                  </span>
+                </button>
+
                 <button
                   onClick={() => handleOpenQr('menu')}
                   className="w-full py-2 px-3 rounded-xl flex items-center gap-2.5 text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-900/40 transition-colors"
@@ -3588,6 +3785,388 @@ Contacto y Soporte: soporte@markethers.com
                     </tbody>
                   </table>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* VIEW: ESTUDIO DE CÓDIGOS QR ÚNICOS & ANALÍTICA DE VISITAS */}
+          {/* ========================================================= */}
+          {activeSection === 'qr_studio' && (
+            <div className="space-y-6">
+              {/* Header card */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm">
+                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+                  <div className="flex items-start sm:items-center gap-3">
+                    <span className="p-3 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/20">
+                      <QrCode className="w-6 h-6 stroke-[2.5]" />
+                    </span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                          Generador de Códigos QR Únicos & Control de Visitas
+                        </h2>
+                        <span className="bg-indigo-50 text-indigo-700 text-[10px] font-black px-2 py-0.5 rounded-full border border-indigo-200">
+                          {businessTrackedQrs.length} QRs Activos
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Genera códigos QR específicos para tus menús, tu plan de afiliación a tarjeta digital, y cada mesa o mostrador de {business.name}. Rastreo en tiempo real de cuántas personas visitan cada uno.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+                    <button
+                      type="button"
+                      onClick={handleQuickCreateMenuQr}
+                      className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all"
+                    >
+                      <Utensils className="w-3.5 h-3.5 text-slate-500" />
+                      <span>+ QR Menú Rápido</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleQuickCreateLoyaltyQr}
+                      className="px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all"
+                    >
+                      <CreditCard className="w-3.5 h-3.5 text-amber-700" />
+                      <span>+ QR Afiliación Rápido</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewQrName('');
+                        setNewQrType('menu');
+                        setNewQrLocation('Mesas');
+                        setNewQrTableNumber('');
+                        setNewQrNotes('');
+                        setIsCreateQrModalOpen(true);
+                      }}
+                      className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-indigo-600/20 flex items-center gap-2 transition-all hover:scale-[1.02]"
+                    >
+                      <Plus className="w-4 h-4 stroke-[3]" />
+                      <span>Generar Nuevo QR Único</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4 KPI Analytics Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mt-5">
+                  <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-4">
+                    <span className="text-[11px] font-bold text-slate-500 block uppercase tracking-wider">
+                      Total Visitas / Escaneos
+                    </span>
+                    <div className="flex items-baseline gap-2 mt-1">
+                      <span className="text-2xl font-black text-slate-900">
+                        {totalQrScans.toLocaleString()}
+                      </span>
+                      <span className="text-[11px] font-bold text-emerald-600 flex items-center">
+                        <TrendingUp className="w-3 h-3 mr-0.5" />
+                        +{totalQrScansToday} hoy
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      En {businessTrackedQrs.length} códigos QR activos
+                    </span>
+                  </div>
+
+                  <div className="bg-indigo-50/60 border border-indigo-100 rounded-xl p-4">
+                    <span className="text-[11px] font-bold text-indigo-700 block uppercase tracking-wider">
+                      Consultas al Menú Digital
+                    </span>
+                    <div className="flex items-baseline gap-2 mt-1">
+                      <span className="text-2xl font-black text-indigo-950">
+                        {totalMenuScans.toLocaleString()}
+                      </span>
+                      <span className="text-[11px] font-bold text-indigo-600">
+                        {totalQrScans > 0 ? Math.round((totalMenuScans / totalQrScans) * 100) : 0}% del tráfico
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-indigo-500 mt-0.5 block">
+                      Mesas, barra y delivery
+                    </span>
+                  </div>
+
+                  <div className="bg-amber-50/60 border border-amber-100 rounded-xl p-4">
+                    <span className="text-[11px] font-bold text-amber-800 block uppercase tracking-wider">
+                      Afiliaciones Club Lealtad
+                    </span>
+                    <div className="flex items-baseline gap-2 mt-1">
+                      <span className="text-2xl font-black text-amber-950">
+                        {totalLoyaltyScans.toLocaleString()}
+                      </span>
+                      <span className="text-[11px] font-bold text-amber-700">
+                        {totalQrScans > 0 ? Math.round((totalLoyaltyScans / totalQrScans) * 100) : 0}% conversión
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-amber-600 mt-0.5 block">
+                      Comensales que abrieron tarjeta
+                    </span>
+                  </div>
+
+                  <div className="bg-emerald-50/60 border border-emerald-100 rounded-xl p-4">
+                    <span className="text-[11px] font-bold text-emerald-800 block uppercase tracking-wider">
+                      QR Más Exitoso / Top Mesa
+                    </span>
+                    <div className="flex items-baseline gap-2 mt-1">
+                      <span className="text-base font-black text-emerald-950 truncate max-w-[160px]" title={topScannedQr?.name || 'N/A'}>
+                        {topScannedQr?.name || 'Sin datos'}
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-bold text-emerald-700 mt-0.5 block">
+                      {topScannedQr ? `${topScannedQr.scansCount} escaneos acumulados` : 'Crea tu primer QR'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Filters & Search Toolbar */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
+                  <button
+                    onClick={() => setQrFilterType('all')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
+                      qrFilterType === 'all'
+                        ? 'bg-slate-900 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Todos ({businessTrackedQrs.length})
+                  </button>
+                  <button
+                    onClick={() => setQrFilterType('menu')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
+                      qrFilterType === 'menu'
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    🍽️ Menú ({businessTrackedQrs.filter(q => q.type === 'menu').length})
+                  </button>
+                  <button
+                    onClick={() => setQrFilterType('loyalty')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
+                      qrFilterType === 'loyalty'
+                        ? 'bg-amber-600 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    💳 Afiliación ({businessTrackedQrs.filter(q => q.type === 'loyalty').length})
+                  </button>
+                  <button
+                    onClick={() => setQrFilterType('table')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
+                      qrFilterType === 'table'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    🪑 Mesas ({businessTrackedQrs.filter(q => q.type === 'table').length})
+                  </button>
+                  <button
+                    onClick={() => setQrFilterType('reviews')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
+                      qrFilterType === 'reviews'
+                        ? 'bg-purple-600 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    ⭐ Reseñas ({businessTrackedQrs.filter(q => q.type === 'reviews').length})
+                  </button>
+                </div>
+
+                <div className="relative w-full md:w-72">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={qrSearchQuery}
+                    onChange={e => setQrSearchQuery(e.target.value)}
+                    placeholder="Buscar por nombre, mesa o ubicación..."
+                    className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                  {qrSearchQuery && (
+                    <button
+                      onClick={() => setQrSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                    >
+                      &times;
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* QR Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredTrackedQrs.length === 0 ? (
+                  <div className="col-span-full bg-white border border-slate-200/90 rounded-2xl p-12 text-center">
+                    <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl mx-auto flex items-center justify-center mb-3">
+                      <QrCode className="w-8 h-8" />
+                    </div>
+                    <h3 className="text-base font-black text-slate-900">No se encontraron códigos QR</h3>
+                    <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-4">
+                      {qrSearchQuery || qrFilterType !== 'all'
+                        ? 'No hay códigos QR que coincidan con los filtros seleccionados.'
+                        : 'Crea tu primer código QR para tu menú digital o plan de afiliación y empieza a medir las visitas.'}
+                    </p>
+                    <button
+                      onClick={() => setIsCreateQrModalOpen(true)}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md inline-flex items-center gap-1.5"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Crear Código QR Ahora</span>
+                    </button>
+                  </div>
+                ) : (
+                  filteredTrackedQrs.map(qr => {
+                    const isMenu = qr.type === 'menu';
+                    const isLoyalty = qr.type === 'loyalty';
+                    const isTable = qr.type === 'table';
+                    const isReviews = qr.type === 'reviews';
+
+                    return (
+                      <div
+                        key={qr.id}
+                        className="bg-white border border-slate-200/90 hover:border-indigo-300 rounded-2xl p-5 shadow-sm transition-all hover:shadow-md flex flex-col justify-between"
+                      >
+                        <div>
+                          {/* Card Top: Badges */}
+                          <div className="flex items-center justify-between gap-2 mb-3">
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${
+                                isMenu
+                                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                                  : isLoyalty
+                                  ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                                  : isTable
+                                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                  : 'bg-purple-50 text-purple-700 border border-purple-200'
+                              }`}
+                            >
+                              {isMenu && <Utensils className="w-3 h-3" />}
+                              {isLoyalty && <CreditCard className="w-3 h-3" />}
+                              {isTable && <Store className="w-3 h-3" />}
+                              {isReviews && <Star className="w-3 h-3" />}
+                              <span>
+                                {isMenu
+                                  ? 'Menú Digital'
+                                  : isLoyalty
+                                  ? 'Plan de Afiliación'
+                                  : isTable
+                                  ? `Mesa ${qr.tableNumber || ''}`
+                                  : 'Reseñas & Info'}
+                              </span>
+                            </span>
+
+                            {qr.location && (
+                              <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+                                <MapPin className="w-3 h-3 text-slate-400" />
+                                <span>{qr.location}</span>
+                              </span>
+                            )}
+                          </div>
+
+                          {/* QR Title & Notes */}
+                          <h3 className="text-base font-black text-slate-900 tracking-tight leading-snug">
+                            {qr.name}
+                          </h3>
+                          {qr.notes && (
+                            <p className="text-xs text-slate-500 mt-1 line-clamp-1">{qr.notes}</p>
+                          )}
+
+                          {/* Live Scan Tracker Highlight */}
+                          <div className="mt-4 p-3 bg-gradient-to-r from-slate-50 to-indigo-50/40 rounded-xl border border-slate-200/80 flex items-center justify-between">
+                            <div>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                Control de Visitas
+                              </span>
+                              <div className="flex items-baseline gap-1.5">
+                                <span className="text-xl font-black text-slate-900">
+                                  {qr.scansCount || 0}
+                                </span>
+                                <span className="text-xs font-bold text-slate-500">visitas</span>
+                              </div>
+                            </div>
+
+                            <div className="text-right">
+                              <span className="inline-block px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black">
+                                +{qr.scansToday || 0} hoy
+                              </span>
+                              <span className="text-[10px] text-slate-400 block mt-0.5">
+                                {qr.lastScannedAt
+                                  ? `Último: ${new Date(qr.lastScannedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                                  : 'Sin visitas aún'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Target Link preview */}
+                          <div className="mt-3 flex items-center justify-between gap-2 p-2 bg-slate-50 rounded-lg border border-slate-100 text-[11px] text-slate-600 font-mono">
+                            <span className="truncate">{qr.targetUrl}</span>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(qr.targetUrl);
+                                setCopyToast('¡Enlace de rastreo copiado!');
+                                setTimeout(() => setCopyToast(null), 3000);
+                              }}
+                              className="p-1 hover:text-slate-900"
+                              title="Copiar URL"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Card Actions Bottom */}
+                        <div className="mt-5 pt-3 border-t border-slate-100 flex flex-col gap-2">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenQrStandModal(qr)}
+                              className="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-sm flex items-center justify-center gap-1.5 transition-all"
+                            >
+                              <Printer className="w-3.5 h-3.5" />
+                              <span>Ver Stand / Imprimir</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleSimulateScan(qr.id)}
+                              className="py-2 px-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-xs rounded-xl transition-all"
+                              title="Simular escaneo de comensal (+1 visita para probar el contador)"
+                            >
+                              <Zap className="w-3.5 h-3.5 inline mr-1 text-emerald-600" />
+                              <span>+1 Visita</span>
+                            </button>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-1">
+                            <a
+                              href={qr.targetUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              <span>Abrir como comensal</span>
+                            </a>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteTrackedQr(qr.id)}
+                              className="text-[11px] font-bold text-slate-400 hover:text-red-600 flex items-center gap-1 transition-colors"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>Eliminar</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           )}
@@ -6857,6 +7436,372 @@ Contacto y Soporte: soporte@markethers.com
               >
                 Cerrar Historial
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: GENERADOR DE NUEVO CÓDIGO QR ÚNICO CON RASTREO     */}
+      {/* ========================================================= */}
+      {isCreateQrModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-xl w-full p-6 text-slate-900 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setIsCreateQrModalOpen(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 rounded-full"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                <QrCode className="w-6 h-6 stroke-[2.5]" />
+              </div>
+              <div>
+                <h3 className="font-black text-lg text-slate-900">Generar Código QR Único</h3>
+                <span className="text-xs text-slate-500 block">
+                  Asigna un QR a tu menú, plan de afiliación a tarjetas Wallet, o una mesa específica con contador de visitas individual.
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {/* Type Selector */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-2">
+                  ¿A dónde dirigirá este Código QR?
+                </label>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewQrType('menu');
+                      if (!newQrName) setNewQrName('Menú Digital Principal');
+                    }}
+                    className={`p-3 rounded-2xl border text-left transition-all ${
+                      newQrType === 'menu'
+                        ? 'border-indigo-600 bg-indigo-50/70 text-indigo-950 shadow-sm ring-2 ring-indigo-500/20'
+                        : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/70 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 font-black text-xs">
+                      <Utensils className="w-4 h-4 text-indigo-600" />
+                      <span>🍽️ Menú Digital</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                      Muestra toda la carta y precios sin contacto.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewQrType('loyalty');
+                      if (!newQrName) setNewQrName('Plan de Afiliación & Tarjeta Wallet');
+                    }}
+                    className={`p-3 rounded-2xl border text-left transition-all ${
+                      newQrType === 'loyalty'
+                        ? 'border-amber-600 bg-amber-50/70 text-amber-950 shadow-sm ring-2 ring-amber-500/20'
+                        : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/70 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 font-black text-xs">
+                      <CreditCard className="w-4 h-4 text-amber-600" />
+                      <span>💳 Plan de Afiliación</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                      Invita al comensal a guardar su tarjeta Apple / Google Wallet.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewQrType('table');
+                      if (!newQrName) setNewQrName('Mesa 1');
+                    }}
+                    className={`p-3 rounded-2xl border text-left transition-all ${
+                      newQrType === 'table'
+                        ? 'border-blue-600 bg-blue-50/70 text-blue-950 shadow-sm ring-2 ring-blue-500/20'
+                        : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/70 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 font-black text-xs">
+                      <Store className="w-4 h-4 text-blue-600" />
+                      <span>🪑 Mesa Específica</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                      Menú con identificador de mesa para pedidos y control.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewQrType('reviews');
+                      if (!newQrName) setNewQrName('Reseñas en Google & InfoLink');
+                    }}
+                    className={`p-3 rounded-2xl border text-left transition-all ${
+                      newQrType === 'reviews'
+                        ? 'border-purple-600 bg-purple-50/70 text-purple-950 shadow-sm ring-2 ring-purple-500/20'
+                        : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/70 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 font-black text-xs">
+                      <Star className="w-4 h-4 text-purple-600" />
+                      <span>⭐ Google Reviews</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                      Enlace directo a dejar reseñas 5 estrellas y redes.
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              {/* QR Name */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Nombre descriptivo del QR *
+                </label>
+                <input
+                  type="text"
+                  value={newQrName}
+                  onChange={e => setNewQrName(e.target.value)}
+                  placeholder="Ej: Mesa 4 Terraza, Menú Cócteles, Afiliación Caja"
+                  className="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium"
+                />
+              </div>
+
+              {/* Location & Table # */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Ubicación física en el local
+                  </label>
+                  <select
+                    value={newQrLocation}
+                    onChange={e => setNewQrLocation(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none font-medium"
+                  >
+                    <option value="Mesas">Mesas / Comedor Principal</option>
+                    <option value="Caja">Caja / Mostrador de Pago</option>
+                    <option value="Barra">Barra / Barra de Tragos</option>
+                    <option value="Terraza">Terraza / Zona Exterior</option>
+                    <option value="Entrada">Entrada / Puerta / Stand Hostess</option>
+                    <option value="Delivery">Empaques / Takeout / Delivery</option>
+                    <option value="Redes">Redes Sociales / Instagram</option>
+                  </select>
+                </div>
+
+                {newQrType === 'table' ? (
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      Número / Nombre de Mesa *
+                    </label>
+                    <input
+                      type="text"
+                      value={newQrTableNumber}
+                      onChange={e => setNewQrTableNumber(e.target.value)}
+                      placeholder="Ej: Mesa 1, Mesa VIP, Barra 3"
+                      className="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none font-medium"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      Identificador de Mesa (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={newQrTableNumber}
+                      onChange={e => setNewQrTableNumber(e.target.value)}
+                      placeholder="Opcional, ej: Mesa 1"
+                      className="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none font-medium"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Internal notes */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Notas o especificaciones del soporte (Opcional)
+                </label>
+                <input
+                  type="text"
+                  value={newQrNotes}
+                  onChange={e => setNewQrNotes(e.target.value)}
+                  placeholder="Ej: Soporte acrílico 10x15cm, colocado frente al espejo"
+                  className="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none font-medium"
+                />
+              </div>
+
+              {/* Live URL Preview */}
+              <div className="p-3 bg-indigo-50/50 rounded-2xl border border-indigo-100 text-xs">
+                <span className="font-bold text-indigo-900 block mb-1">
+                  🔗 Trazabilidad & Rastreo en Tiempo Real:
+                </span>
+                <p className="text-[11px] text-indigo-800 leading-relaxed font-mono break-all">
+                  {(typeof window !== 'undefined' ? window.location.origin : 'https://markethers.vercel.app')}/
+                  {business.slug}?qr=qr-xxx&tab={newQrType === 'loyalty' ? 'card' : newQrType === 'reviews' ? 'info' : 'menu'}
+                  {newQrTableNumber ? `&table=${encodeURIComponent(newQrTableNumber)}` : ''}
+                </p>
+                <p className="text-[10px] text-indigo-600 mt-1">
+                  Cada vez que un comensal apunte su cámara a este código, el sistema registrará una visita en vivo y lo contabilizará en tu tablero.
+                </p>
+              </div>
+
+              {/* Action buttons */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateQrModalOpen(false)}
+                  className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={!newQrName.trim()}
+                  onClick={handleCreateTrackedQr}
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-extrabold text-xs rounded-xl shadow-md shadow-indigo-600/20 flex items-center gap-1.5 transition-all hover:scale-[1.02]"
+                >
+                  <Plus className="w-4 h-4 stroke-[3]" />
+                  <span>Crear y Habilitar Rastreo</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: STAND ACRÍLICO / MESA PARA IMPRIMIR CON QR DE ALTA */}
+      {/* ========================================================= */}
+      {selectedTrackedQrForModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 text-slate-900 shadow-2xl relative max-h-[92vh] overflow-y-auto">
+            <button
+              onClick={() => setSelectedTrackedQrForModal(null)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 rounded-full"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Stand Acrylic Mockup Preview (Printable area) */}
+            <div id="printable-stand-area" className="p-6 bg-gradient-to-b from-slate-50 via-white to-slate-50 rounded-2xl border-2 border-slate-300/80 shadow-md text-center">
+              {/* Business Badge */}
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-white border border-slate-200 rounded-full shadow-sm mb-4">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                  {business.name}
+                </span>
+              </div>
+
+              {/* Title & Call to Action */}
+              <h3 className="text-xl font-black text-slate-950 tracking-tight leading-tight">
+                {selectedTrackedQrForModal.type === 'menu'
+                  ? '¡Explora Nuestro Menú Digital!'
+                  : selectedTrackedQrForModal.type === 'loyalty'
+                  ? '¡Únete al Club VIP & Gana Premios!'
+                  : selectedTrackedQrForModal.type === 'table'
+                  ? `Mesa ${selectedTrackedQrForModal.tableNumber || ''} • Menú en tu Móvil`
+                  : '¡Califícanos en Google!'}
+              </h3>
+              <p className="text-xs text-slate-600 mt-1 max-w-xs mx-auto">
+                {selectedTrackedQrForModal.type === 'loyalty'
+                  ? 'Apunta tu cámara para añadir tu Tarjeta de Lealtad a Apple Wallet o Google Wallet.'
+                  : 'Apunta la cámara de tu teléfono móvil a este código para ver la carta y ordenar al instante.'}
+              </p>
+
+              {/* High-Res QR Code Image */}
+              <div className="my-5 p-4 bg-white rounded-2xl shadow-sm border border-slate-200 inline-block">
+                {modalRenderedQrDataUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={modalRenderedQrDataUrl}
+                    alt={`Código QR ${selectedTrackedQrForModal.name}`}
+                    className="w-52 h-52 mx-auto rounded-xl object-contain"
+                  />
+                ) : (
+                  <div className="w-52 h-52 flex items-center justify-center bg-slate-100 rounded-xl text-xs text-slate-400">
+                    Generando QR de alta resolución...
+                  </div>
+                )}
+                <span className="text-[10px] font-bold text-slate-400 block mt-2 tracking-wide uppercase">
+                  Sin descargar aplicaciones
+                </span>
+              </div>
+
+              {/* Location & Stand Footer */}
+              <div className="flex items-center justify-center gap-2 text-xs font-semibold text-slate-500">
+                {selectedTrackedQrForModal.location && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                    <span>{selectedTrackedQrForModal.location}</span>
+                  </span>
+                )}
+                <span>&bull;</span>
+                <span className="text-indigo-600 font-bold">
+                  {selectedTrackedQrForModal.name}
+                </span>
+              </div>
+
+              {/* Live Visits Counter Badge */}
+              <div className="mt-4 pt-3 border-t border-slate-200/80 flex items-center justify-between text-xs text-slate-500">
+                <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1">
+                  <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>{selectedTrackedQrForModal.scansCount || 0} visitas registradas</span>
+                </span>
+                <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold">
+                  +{selectedTrackedQrForModal.scansToday || 0} hoy
+                </span>
+              </div>
+            </div>
+
+            {/* Action Bar Bottom */}
+            <div className="mt-5 space-y-2">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Imprimir Stand (10x15cm)</span>
+                </button>
+
+                {modalRenderedQrDataUrl && (
+                  <a
+                    href={modalRenderedQrDataUrl}
+                    download={`qr_${business.slug}_${selectedTrackedQrForModal.name.toLowerCase().replace(/\s+/g, '_')}.png`}
+                    className="px-4 py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Descargar PNG</span>
+                  </a>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  type="button"
+                  onClick={() => handleSimulateScan(selectedTrackedQrForModal.id)}
+                  className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors"
+                >
+                  <Zap className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Probar Escaneo / +1 Visita</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedTrackedQrForModal(null)}
+                  className="px-3 py-1.5 text-xs font-bold text-slate-500 hover:text-slate-800"
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
           </div>
         </div>
