@@ -435,35 +435,6 @@ export function DigitalMenuShowcase() {
           </div>
         </div>
       )}
-
-      {/* WHATSAPP ORDERING SPOTLIGHT BANNER */}
-      <div className="mt-10 bg-gradient-to-r from-emerald-950/70 via-zinc-900 to-emerald-950/70 border border-emerald-500/30 rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
-            <MessageCircle className="w-6 h-6" />
-          </div>
-          <div>
-            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 inline-block mb-1">
-              {t.whatsappBadge}
-            </span>
-            <h4 className="text-base sm:text-lg font-bold text-white">
-              {t.whatsappTitle}
-            </h4>
-            <p className="text-xs text-zinc-300 mt-1 max-w-xl leading-relaxed">
-              {t.whatsappDesc}
-            </p>
-          </div>
-        </div>
-
-        <Link
-          href="/aroma-cafe?tab=menu"
-          target="_blank"
-          className="shrink-0 px-5 py-3 bg-[#22c55e] hover:bg-emerald-600 text-black font-extrabold text-xs rounded-xl flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all hover:scale-105"
-        >
-          <ShoppingBag className="w-4 h-4" />
-          <span>{t.whatsappButton}</span>
-        </Link>
-      </div>
     </section>
   );
 }
