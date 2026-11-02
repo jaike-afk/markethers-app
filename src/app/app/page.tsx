@@ -1230,7 +1230,7 @@ export default function MarkethersAppPortal() {
                     {transactions.map(t => (
                       <tr key={t.id} className="hover:bg-slate-50/80">
                         <td className="py-3 px-4 font-mono text-slate-500">
-                          {new Date(t.timestamp).toLocaleDateString('es-MX', {
+                          {new Date(t.createdAt).toLocaleDateString('es-MX', {
                             day: 'numeric',
                             month: 'short',
                             hour: '2-digit',
@@ -1241,16 +1241,16 @@ export default function MarkethersAppPortal() {
                         <td className="py-3 px-4">
                           <span
                             className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              t.type === 'reward_redeem'
+                              t.type === 'REWARD_REDEEMED'
                                 ? 'bg-amber-100 text-amber-800'
                                 : 'bg-emerald-100 text-emerald-800'
                             }`}
                           >
-                            {t.type === 'reward_redeem' ? '🎁 Canje de Premio' : '☑️ Sello de Visita'}
+                            {t.type === 'REWARD_REDEEMED' ? '🎁 Canje de Premio' : '☑️ Sello de Visita'}
                           </span>
                         </td>
                         <td className="py-3 px-4 font-bold text-emerald-600">
-                          {t.type === 'stamp' ? `+${t.stampsCount}` : 'Premio Entregado'}
+                          {t.type === 'REWARD_REDEEMED' ? 'Premio Entregado' : `+${t.stampsChanged}`}
                         </td>
                         <td className="py-3 px-4 text-slate-500">{t.staffName}</td>
                       </tr>

@@ -1,4 +1,4 @@
-export type StampIconType = 'coffee' | 'star' | 'gift' | 'heart' | 'scissors' | 'burger' | 'pizza' | 'cupcake';
+export type StampIconType = 'coffee' | 'star' | 'gift' | 'heart' | 'scissors' | 'burger' | 'pizza' | 'cupcake' | 'glass';
 
 export interface LoyaltyCardConfig {
   totalStamps: number;

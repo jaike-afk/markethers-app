@@ -39,6 +39,7 @@ export function StampGrid({
         return <Coffee className={iconClass} />;
       case 'scissors':
         return <Scissors className={iconClass} />;
+      case 'glass':
       case 'burger':
       case 'pizza':
         return <Utensils className={iconClass} />;

@@ -77,8 +77,13 @@ function RegisterForm() {
         description: 'Menú digital y tarjeta de lealtad en Apple & Google Wallet.',
         category: businessCategory,
         logoUrl: '🍸',
+        coverUrl: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=1200&q=80',
         phone: whatsapp || '+52 55 1234 5678',
         whatsapp: (whatsapp || '525512345678').replace(/\D/g, ''),
+        instagram: '',
+        address: city || 'Dirección del Local',
+        city: city || 'Ciudad',
+        pinCode: '1234',
         currency: '$',
         loyaltyConfig: {
           totalStamps: 6,
