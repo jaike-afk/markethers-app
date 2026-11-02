@@ -56,8 +56,28 @@ export interface Customer {
   rewardsEarned: number;
   rewardsRedeemed: number;
   points: number;
+  totalSpent?: number;
+  tier?: 'vip' | 'frecuente' | 'nuevo';
+  walletPassType?: 'apple' | 'google';
+  notes?: string;
   createdAt: string;
   lastVisitAt: string;
+}
+
+export interface SaleRecord {
+  id: string;
+  businessId: string;
+  customerId?: string;
+  customerName: string;
+  customerPhone?: string;
+  itemsSummary: string;
+  amount: number;
+  paymentMethod: 'cash' | 'card' | 'apple_pay' | 'transfer';
+  stampsAwarded: number;
+  status: 'completed' | 'refunded';
+  notes?: string;
+  staffName: string;
+  createdAt: string;
 }
 
 export interface StampTransaction {

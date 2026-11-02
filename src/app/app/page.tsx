@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { INITIAL_BUSINESSES, INITIAL_CUSTOMERS, INITIAL_MENU_ITEMS, INITIAL_TRANSACTIONS } from '@/lib/store';
-import { Business, Customer, MenuItem, StampTransaction } from '@/types';
+import { INITIAL_BUSINESSES, INITIAL_CUSTOMERS, INITIAL_MENU_ITEMS, INITIAL_TRANSACTIONS, INITIAL_SALES } from '@/lib/store';
+import { Business, Customer, MenuItem, StampTransaction, SaleRecord } from '@/types';
 import { getCurrentUser, logoutUser, UserAccount } from '@/lib/auth';
 import { AppleWalletCard } from '@/components/AppleWalletCard';
 import { CameraScanner } from '@/components/CameraScanner';
@@ -56,6 +56,12 @@ import {
   Phone,
   Zap,
   Calendar,
+  Receipt,
+  CircleDollarSign,
+  BarChart3,
+  Filter,
+  ArrowUpRight,
+  Wallet,
 } from 'lucide-react';
 
 export default function MarkethersAppPortal() {
@@ -69,6 +75,7 @@ export default function MarkethersAppPortal() {
   // Active navigation section
   const [activeSection, setActiveSection] = useState<
     | 'panel'
+    | 'ventas'
     | 'tarjetas'
     | 'clientes'
     | 'escaner'
@@ -85,6 +92,40 @@ export default function MarkethersAppPortal() {
     | 'infolink'
     | 'facturacion'
   >('panel');
+
+  // Customer & Sales Database State (persisted in localStorage)
+  const [allCustomers, setAllCustomers] = useState<Customer[]>(INITIAL_CUSTOMERS);
+  const [allSales, setAllSales] = useState<SaleRecord[]>(INITIAL_SALES);
+  const [allTransactions, setAllTransactions] = useState<StampTransaction[]>(INITIAL_TRANSACTIONS);
+
+  // Period & Filter state for Executive Dashboard
+  const [dashboardPeriod, setDashboardPeriod] = useState<'today' | '7d' | '30d' | 'all'>('today');
+  const [movementFilter, setMovementFilter] = useState<'all' | 'sales' | 'stamps' | 'rewards'>('all');
+  const [customerFilterTier, setCustomerFilterTier] = useState<'all' | 'vip' | 'frecuente' | 'nuevo'>('all');
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+
+  // Modals for Owner actions
+  const [isRecordSaleModalOpen, setIsRecordSaleModalOpen] = useState(false);
+  const [isNewCustomerModalOpen, setIsNewCustomerModalOpen] = useState(false);
+  const [selectedCustomerDetail, setSelectedCustomerDetail] = useState<Customer | null>(null);
+
+  // Record Sale Form state
+  const [saleCustomerId, setSaleCustomerId] = useState('');
+  const [saleCustomerName, setSaleCustomerName] = useState('');
+  const [saleCustomerPhone, setSaleCustomerPhone] = useState('');
+  const [saleAmount, setSaleAmount] = useState('');
+  const [saleItemsSummary, setSaleItemsSummary] = useState('');
+  const [salePaymentMethod, setSalePaymentMethod] = useState<'card' | 'cash' | 'apple_pay' | 'transfer'>('card');
+  const [saleStampsToAward, setSaleStampsToAward] = useState(1);
+
+  // New Customer Form state
+  const [newCustomerName, setNewCustomerName] = useState('');
+  const [newCustomerPhone, setNewCustomerPhone] = useState('');
+  const [newCustomerEmail, setNewCustomerEmail] = useState('');
+  const [newCustomerInitialStamps, setNewCustomerInitialStamps] = useState(1);
+  const [newCustomerWalletType, setNewCustomerWalletType] = useState<'apple' | 'google'>('apple');
+  const [newCustomerNotes, setNewCustomerNotes] = useState('');
+  const [currentTimestamp, setCurrentTimestamp] = useState<number>(0);
 
   // Sidebar collapsible groups
   const [fidelizacionOpen, setFidelizacionOpen] = useState(true);
@@ -123,15 +164,19 @@ export default function MarkethersAppPortal() {
   const [pushSentSuccess, setPushSentSuccess] = useState(false);
 
   const handleExportCSV = () => {
-    const headers = ['Nombre', 'Telefono', 'Email', 'Codigo Wallet', 'Sellos Actuales', 'Total Visitas', 'Fecha Registro'];
+    const headers = ['Nombre', 'Telefono', 'Email', 'Codigo Wallet', 'Wallet', 'Nivel', 'Total Gastado ($)', 'Sellos Actuales', 'Total Visitas', 'Fecha Registro', 'Notas'];
     const rows = customers.map(c => [
       `"${c.name}"`,
       `"${c.phone}"`,
       `"${c.email || ''}"`,
       `"${c.qrCodeToken}"`,
+      `"${c.walletPassType === 'google' ? 'Google Wallet' : 'Apple Wallet'}"`,
+      `"${(c.tier || 'nuevo').toUpperCase()}"`,
+      c.totalSpent || 0,
       c.currentStamps,
       c.totalVisits,
       `"${c.createdAt || new Date().toISOString()}"`,
+      `"${c.notes || ''}"`,
     ]);
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
@@ -195,6 +240,44 @@ export default function MarkethersAppPortal() {
         const parsed = JSON.parse(savedSub);
         setSubscription(prev => ({ ...prev, ...parsed }));
       }
+
+      // Load or initialize customers DB
+      const storedCustomers = localStorage.getItem('markethers_customers_db');
+      if (storedCustomers) {
+        try {
+          setAllCustomers(JSON.parse(storedCustomers));
+        } catch {
+          setAllCustomers(INITIAL_CUSTOMERS);
+        }
+      } else {
+        localStorage.setItem('markethers_customers_db', JSON.stringify(INITIAL_CUSTOMERS));
+      }
+
+      // Load or initialize sales DB
+      const storedSales = localStorage.getItem('markethers_sales_db');
+      if (storedSales) {
+        try {
+          setAllSales(JSON.parse(storedSales));
+        } catch {
+          setAllSales(INITIAL_SALES);
+        }
+      } else {
+        localStorage.setItem('markethers_sales_db', JSON.stringify(INITIAL_SALES));
+      }
+
+      // Load or initialize transactions DB
+      const storedTx = localStorage.getItem('markethers_transactions_db');
+      if (storedTx) {
+        try {
+          setAllTransactions(JSON.parse(storedTx));
+        } catch {
+          setAllTransactions(INITIAL_TRANSACTIONS);
+        }
+      } else {
+        localStorage.setItem('markethers_transactions_db', JSON.stringify(INITIAL_TRANSACTIONS));
+      }
+
+      setCurrentTimestamp(Date.now());
     } catch (e) {
       console.error(e);
       setAuthChecking(false);
@@ -297,15 +380,54 @@ Contacto y Soporte: soporte@markethers.com
   const [whatsappNumberInput, setWhatsappNumberInput] = useState(business.whatsapp || '525577889900');
   const [saveDesignerSuccess, setSaveDesignerSuccess] = useState(false);
 
-  const customers = INITIAL_CUSTOMERS.filter(c => c.businessId === business.id).length > 0
-    ? INITIAL_CUSTOMERS.filter(c => c.businessId === business.id)
-    : INITIAL_CUSTOMERS;
+  const customers = allCustomers.filter(c => c.businessId === business.id).length > 0
+    ? allCustomers.filter(c => c.businessId === business.id)
+    : allCustomers;
+  const sales = allSales.filter(s => s.businessId === business.id).length > 0
+    ? allSales.filter(s => s.businessId === business.id)
+    : allSales;
   const menuItems = INITIAL_MENU_ITEMS.filter(m => m.businessId === business.id).length > 0
     ? INITIAL_MENU_ITEMS.filter(m => m.businessId === business.id)
     : INITIAL_MENU_ITEMS;
-  const transactions = INITIAL_TRANSACTIONS.filter(t => t.businessId === business.id).length > 0
-    ? INITIAL_TRANSACTIONS.filter(t => t.businessId === business.id)
-    : INITIAL_TRANSACTIONS;
+  const transactions = allTransactions.filter(t => t.businessId === business.id).length > 0
+    ? allTransactions.filter(t => t.businessId === business.id)
+    : allTransactions;
+
+  // Filtered by Executive Dashboard period
+  const filteredSales = sales.filter(s => {
+    if (dashboardPeriod === 'all' || !currentTimestamp) return true;
+    const date = new Date(s.createdAt).getTime();
+    if (dashboardPeriod === 'today') return currentTimestamp - date <= 24 * 60 * 60 * 1000;
+    if (dashboardPeriod === '7d') return currentTimestamp - date <= 7 * 24 * 60 * 60 * 1000;
+    if (dashboardPeriod === '30d') return currentTimestamp - date <= 30 * 24 * 60 * 60 * 1000;
+    return true;
+  });
+
+  const filteredTransactions = transactions.filter(t => {
+    if (dashboardPeriod === 'all' || !currentTimestamp) return true;
+    const date = new Date(t.createdAt).getTime();
+    if (dashboardPeriod === 'today') return currentTimestamp - date <= 24 * 60 * 60 * 1000;
+    if (dashboardPeriod === '7d') return currentTimestamp - date <= 7 * 24 * 60 * 60 * 1000;
+    if (dashboardPeriod === '30d') return currentTimestamp - date <= 30 * 24 * 60 * 60 * 1000;
+    return true;
+  });
+
+  const totalSalesAmount = filteredSales.reduce((acc, s) => acc + s.amount, 0);
+  const totalOrdersCount = filteredSales.length;
+  const averageTicket = totalOrdersCount > 0 ? Math.round(totalSalesAmount / totalOrdersCount) : 0;
+  const total30dSales = sales.reduce((acc, s) => acc + s.amount, 0);
+
+  const totalStampsAwarded = filteredTransactions
+    .filter(t => t.type === 'STAMP_ADDED')
+    .reduce((acc, t) => acc + t.stampsChanged, 0);
+
+  const totalRewardsRedeemed = filteredTransactions
+    .filter(t => t.type === 'REWARD_REDEEMED')
+    .length;
+
+  const recurringCustomersCount = customers.filter(c => c.totalVisits >= 2).length;
+  const appleWalletCount = customers.filter(c => c.walletPassType !== 'google').length;
+  const googleWalletCount = customers.filter(c => c.walletPassType === 'google').length;
 
   const todayFormatted = 'domingo, 1 de noviembre';
 
@@ -330,12 +452,42 @@ Contacto y Soporte: soporte@markethers.com
     if (!scannedCustomer) return;
     const target = business.loyaltyConfig.totalStamps;
     const updatedStamps = scannedCustomer.currentStamps + count;
-    setScannedCustomer({
+    const unlocked = updatedStamps >= target;
+
+    const updatedCustomer: Customer = {
       ...scannedCustomer,
       currentStamps: updatedStamps,
       totalVisits: scannedCustomer.totalVisits + 1,
-    });
-    if (updatedStamps >= target) {
+      rewardsEarned: unlocked ? scannedCustomer.rewardsEarned + 1 : scannedCustomer.rewardsEarned,
+      points: scannedCustomer.points + count * 10,
+      lastVisitAt: new Date().toISOString(),
+    };
+
+    setScannedCustomer(updatedCustomer);
+    const updatedList = allCustomers.map(c => (c.id === updatedCustomer.id ? updatedCustomer : c));
+    setAllCustomers(updatedList);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('markethers_customers_db', JSON.stringify(updatedList));
+    }
+
+    const newTx: StampTransaction = {
+      id: `tx_${Date.now()}`,
+      businessId: business.id,
+      customerId: updatedCustomer.id,
+      customerName: updatedCustomer.name,
+      type: 'STAMP_ADDED',
+      stampsChanged: count,
+      notes: unlocked ? '¡Completó tarjeta de sellos! 🎉' : `+${count} sello(s)`,
+      staffName: currentUser?.name || 'Cajero',
+      createdAt: new Date().toISOString(),
+    };
+    const updatedTxList = [newTx, ...allTransactions];
+    setAllTransactions(updatedTxList);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('markethers_transactions_db', JSON.stringify(updatedTxList));
+    }
+
+    if (unlocked) {
       setScanMessage('¡Premio desbloqueado! 🎉');
     } else {
       setScanMessage(`+${count} Sello agregado.`);
@@ -345,12 +497,217 @@ Contacto y Soporte: soporte@markethers.com
   const handleRedeemReward = () => {
     if (!scannedCustomer) return;
     const target = business.loyaltyConfig.totalStamps;
-    setScannedCustomer({
+    if (scannedCustomer.currentStamps < target) {
+      setScanError(`Requiere ${target} sellos para canjear.`);
+      return;
+    }
+    const updatedCustomer: Customer = {
       ...scannedCustomer,
       currentStamps: Math.max(0, scannedCustomer.currentStamps - target),
       rewardsRedeemed: scannedCustomer.rewardsRedeemed + 1,
-    });
+      lastVisitAt: new Date().toISOString(),
+    };
+    setScannedCustomer(updatedCustomer);
+    const updatedList = allCustomers.map(c => (c.id === updatedCustomer.id ? updatedCustomer : c));
+    setAllCustomers(updatedList);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('markethers_customers_db', JSON.stringify(updatedList));
+    }
+
+    const newTx: StampTransaction = {
+      id: `tx_${Date.now()}`,
+      businessId: business.id,
+      customerId: updatedCustomer.id,
+      customerName: updatedCustomer.name,
+      type: 'REWARD_REDEEMED',
+      stampsChanged: -target,
+      notes: `Canjeó premio: ${business.loyaltyConfig.rewardTitle || 'Premio'}`,
+      staffName: currentUser?.name || 'Cajero',
+      createdAt: new Date().toISOString(),
+    };
+    const updatedTxList = [newTx, ...allTransactions];
+    setAllTransactions(updatedTxList);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('markethers_transactions_db', JSON.stringify(updatedTxList));
+    }
+
     setScanMessage('¡Recompensa canjeada con éxito!');
+  };
+
+  const handleRecordSale = (e: React.FormEvent) => {
+    e.preventDefault();
+    const amountNum = parseFloat(saleAmount) || 0;
+    if (amountNum <= 0) return;
+
+    let custName = saleCustomerName.trim() || 'Comensal en mostrador';
+    let custId: string | undefined = undefined;
+    let custPhone: string | undefined = saleCustomerPhone.trim();
+
+    if (saleCustomerId) {
+      const found = customers.find(c => c.id === saleCustomerId);
+      if (found) {
+        custName = found.name;
+        custId = found.id;
+        custPhone = found.phone;
+      }
+    }
+
+    const stampsCount = Number(saleStampsToAward) || 1;
+
+    const newSale: SaleRecord = {
+      id: `sale_${Date.now()}`,
+      businessId: business.id,
+      customerId: custId,
+      customerName: custName,
+      customerPhone: custPhone,
+      itemsSummary: saleItemsSummary.trim() || 'Consumo en establecimiento',
+      amount: amountNum,
+      paymentMethod: salePaymentMethod,
+      stampsAwarded: stampsCount,
+      status: 'completed',
+      staffName: currentUser?.name || 'Cajero',
+      createdAt: new Date().toISOString(),
+    };
+
+    const updatedSales = [newSale, ...allSales];
+    setAllSales(updatedSales);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('markethers_sales_db', JSON.stringify(updatedSales));
+    }
+
+    if (custId) {
+      const updatedCustomers = allCustomers.map(c => {
+        if (c.id === custId) {
+          const newStamps = c.currentStamps + stampsCount;
+          const target = business.loyaltyConfig.totalStamps;
+          const unlocked = newStamps >= target;
+          return {
+            ...c,
+            currentStamps: newStamps,
+            totalVisits: c.totalVisits + 1,
+            totalSpent: (c.totalSpent || 0) + amountNum,
+            rewardsEarned: unlocked ? c.rewardsEarned + 1 : c.rewardsEarned,
+            points: c.points + stampsCount * 10,
+            lastVisitAt: new Date().toISOString(),
+          };
+        }
+        return c;
+      });
+      setAllCustomers(updatedCustomers);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('markethers_customers_db', JSON.stringify(updatedCustomers));
+      }
+    }
+
+    const newTx: StampTransaction = {
+      id: `tx_${Date.now()}`,
+      businessId: business.id,
+      customerId: custId || 'guest',
+      customerName: custName,
+      type: 'STAMP_ADDED',
+      stampsChanged: stampsCount,
+      notes: `Venta $${amountNum} (${saleItemsSummary || 'Consumo'}) • +${stampsCount} sello(s)`,
+      staffName: currentUser?.name || 'Cajero',
+      createdAt: new Date().toISOString(),
+    };
+    const updatedTxList = [newTx, ...allTransactions];
+    setAllTransactions(updatedTxList);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('markethers_transactions_db', JSON.stringify(updatedTxList));
+    }
+
+    setSaleAmount('');
+    setSaleItemsSummary('');
+    setSaleCustomerName('');
+    setSaleCustomerPhone('');
+    setSaleCustomerId('');
+    setIsRecordSaleModalOpen(false);
+    setPlanChangeToast(`¡Venta de $${amountNum} y ${stampsCount} sello(s) registrados con éxito!`);
+    setTimeout(() => setPlanChangeToast(null), 3500);
+  };
+
+  const handleAddNewCustomer = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCustomerName.trim() || !newCustomerPhone.trim()) return;
+
+    const prefix = business.slug.substring(0, 5).toUpperCase();
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    const token = `CARD-${prefix}-${rand}`;
+
+    const newCust: Customer = {
+      id: `cust_${Date.now()}`,
+      businessId: business.id,
+      name: newCustomerName.trim(),
+      phone: newCustomerPhone.trim(),
+      email: newCustomerEmail.trim() || undefined,
+      qrCodeToken: token,
+      currentStamps: Number(newCustomerInitialStamps) || 1,
+      totalVisits: 1,
+      rewardsEarned: 0,
+      rewardsRedeemed: 0,
+      points: 20,
+      totalSpent: 0,
+      tier: 'nuevo',
+      walletPassType: newCustomerWalletType,
+      notes: newCustomerNotes.trim() || undefined,
+      createdAt: new Date().toISOString(),
+      lastVisitAt: new Date().toISOString(),
+    };
+
+    const updated = [newCust, ...allCustomers];
+    setAllCustomers(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('markethers_customers_db', JSON.stringify(updated));
+    }
+
+    const newTx: StampTransaction = {
+      id: `tx_${Date.now()}`,
+      businessId: business.id,
+      customerId: newCust.id,
+      customerName: newCust.name,
+      type: 'STAMP_ADDED',
+      stampsChanged: newCust.currentStamps,
+      notes: 'Alta en base de datos • Sello de bienvenida',
+      staffName: currentUser?.name || 'Administrador',
+      createdAt: new Date().toISOString(),
+    };
+    const updatedTxList = [newTx, ...allTransactions];
+    setAllTransactions(updatedTxList);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('markethers_transactions_db', JSON.stringify(updatedTxList));
+    }
+
+    setNewCustomerName('');
+    setNewCustomerPhone('');
+    setNewCustomerEmail('');
+    setNewCustomerInitialStamps(1);
+    setNewCustomerNotes('');
+    setIsNewCustomerModalOpen(false);
+    setPlanChangeToast(`¡Cliente "${newCust.name}" registrado en la base de datos!`);
+    setTimeout(() => setPlanChangeToast(null), 3500);
+  };
+
+  const handleExportSalesCSV = () => {
+    const headers = ['ID Venta', 'Fecha', 'Cliente', 'Telefono', 'Detalle Consumo', 'Monto ($)', 'Metodo Pago', 'Sellos Otorgados', 'Atendido Por'];
+    const rows = sales.map(s => [
+      `"${s.id}"`,
+      `"${new Date(s.createdAt).toLocaleString('es-MX')}"`,
+      `"${s.customerName}"`,
+      `"${s.customerPhone || ''}"`,
+      `"${s.itemsSummary}"`,
+      s.amount,
+      `"${s.paymentMethod}"`,
+      s.stampsAwarded,
+      `"${s.staffName}"`,
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `ventas_y_movimientos_${business.slug}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleSendPush = (e: React.FormEvent) => {
@@ -473,6 +830,46 @@ Contacto y Soporte: soporte@markethers.com
               <div className="space-y-0.5 mt-1">
                 <button
                   onClick={() => {
+                    setActiveSection('ventas');
+                    setMobileSidebarOpen(false);
+                  }}
+                  className={`w-full py-2 px-3 rounded-xl flex items-center justify-between text-xs font-medium transition-colors ${
+                    activeSection === 'ventas'
+                      ? 'bg-slate-800 text-white font-bold'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-900/40'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Receipt className="w-4 h-4 text-emerald-400" />
+                    <span>Ventas & Movimientos</span>
+                  </div>
+                  <span className="text-[10px] font-bold bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded">
+                    {sales.length}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setActiveSection('clientes');
+                    setMobileSidebarOpen(false);
+                  }}
+                  className={`w-full py-2 px-3 rounded-xl flex items-center justify-between text-xs font-medium transition-colors ${
+                    activeSection === 'clientes'
+                      ? 'bg-slate-800 text-white font-bold'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-900/40'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Users className="w-4 h-4 text-blue-400" />
+                    <span>Base de Clientes (CRM)</span>
+                  </div>
+                  <span className="text-[10px] font-bold bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded">
+                    {customers.length}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => {
                     setActiveSection('tarjetas');
                     setMobileSidebarOpen(false);
                   }}
@@ -483,22 +880,7 @@ Contacto y Soporte: soporte@markethers.com
                   }`}
                 >
                   <CreditCard className="w-4 h-4" />
-                  <span>Tarjetas</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    setActiveSection('clientes');
-                    setMobileSidebarOpen(false);
-                  }}
-                  className={`w-full py-2 px-3 rounded-xl flex items-center gap-2.5 text-xs font-medium transition-colors ${
-                    activeSection === 'clientes'
-                      ? 'bg-slate-800 text-white font-bold'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-900/40'
-                  }`}
-                >
-                  <Users className="w-4 h-4" />
-                  <span>Clientes</span>
+                  <span>Tarjetas Wallet</span>
                 </button>
 
                 <button
@@ -936,35 +1318,133 @@ Contacto y Soporte: soporte@markethers.com
                 </div>
               )}
 
-              {/* SECTION: HOY */}
+              {/* EXECUTIVE DASHBOARD CONTROLS & PERIOD SELECTOR */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+                      Dashboard Ejecutivo de Ventas & Clientes
+                    </h2>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Métricas de ingresos, base de datos de comensales y movimientos en tiempo real para <strong>{business.name}</strong>.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                  {/* Period filter buttons */}
+                  <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-bold text-slate-600">
+                    <button
+                      type="button"
+                      onClick={() => setDashboardPeriod('today')}
+                      className={`px-3 py-1.5 rounded-lg transition-all ${
+                        dashboardPeriod === 'today'
+                          ? 'bg-white text-slate-900 shadow-sm font-extrabold'
+                          : 'hover:text-slate-900'
+                      }`}
+                    >
+                      Hoy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDashboardPeriod('7d')}
+                      className={`px-3 py-1.5 rounded-lg transition-all ${
+                        dashboardPeriod === '7d'
+                          ? 'bg-white text-slate-900 shadow-sm font-extrabold'
+                          : 'hover:text-slate-900'
+                      }`}
+                    >
+                      7 días
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDashboardPeriod('30d')}
+                      className={`px-3 py-1.5 rounded-lg transition-all ${
+                        dashboardPeriod === '30d'
+                          ? 'bg-white text-slate-900 shadow-sm font-extrabold'
+                          : 'hover:text-slate-900'
+                      }`}
+                    >
+                      30 días
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDashboardPeriod('all')}
+                      className={`px-3 py-1.5 rounded-lg transition-all ${
+                        dashboardPeriod === 'all'
+                          ? 'bg-white text-slate-900 shadow-sm font-extrabold'
+                          : 'hover:text-slate-900'
+                      }`}
+                    >
+                      Histórico
+                    </button>
+                  </div>
+
+                  {/* Action: Registrar Venta */}
+                  <button
+                    type="button"
+                    onClick={() => setIsRecordSaleModalOpen(true)}
+                    className="flex-1 sm:flex-none px-4 py-2 bg-[#22c55e] hover:bg-emerald-600 text-black font-extrabold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 cursor-pointer transition-all hover:scale-[1.02]"
+                  >
+                    <Receipt className="w-4 h-4 stroke-[2.5]" />
+                    <span>Registrar Venta / Cobro</span>
+                  </button>
+
+                  {/* Action: Nuevo Cliente */}
+                  <button
+                    type="button"
+                    onClick={() => setIsNewCustomerModalOpen(true)}
+                    className="flex-1 sm:flex-none px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm cursor-pointer transition-all"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>+ Cliente</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* SECTION: VENTAS & REVENUE METRICS */}
               <div>
                 <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2 px-1">
-                  Hoy
+                  Métricas de Venta • {dashboardPeriod === 'today' ? 'Hoy' : dashboardPeriod === '7d' ? 'Últimos 7 días' : dashboardPeriod === '30d' ? 'Últimos 30 días' : 'Todo el Histórico'}
                 </span>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* Card 1: PEDIDOS HOY */}
+                  {/* Card 1: VENTAS / INGRESOS DEL PERIODO */}
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-emerald-600">
+                        <DollarSign className="w-4 h-4 stroke-[2.5]" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider">
+                          Ventas ({dashboardPeriod === 'today' ? 'Hoy' : dashboardPeriod === '7d' ? '7d' : dashboardPeriod === '30d' ? '30d' : 'Histórico'})
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        +14.2%
+                      </span>
+                    </div>
+                    <div className="text-3xl font-black text-slate-900 mt-2">
+                      $ {totalSalesAmount.toLocaleString()}
+                    </div>
+                    <span className="text-xs text-slate-400 mt-1 block">
+                      {totalOrdersCount} transacciones registradas
+                    </span>
+                  </div>
+
+                  {/* Card 2: PEDIDOS / TRANSACCIONES */}
                   <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-sm">
                     <div className="flex items-center gap-1.5 text-emerald-600">
                       <ShoppingBag className="w-4 h-4 stroke-[2.5]" />
                       <span className="text-[10px] font-bold uppercase tracking-wider">
-                        Pedidos hoy
+                        Transacciones
                       </span>
                     </div>
-                    <div className="text-3xl font-black text-emerald-600 mt-2">0</div>
-                    <span className="text-xs text-slate-400 mt-1 block">0 en 30d</span>
-                  </div>
-
-                  {/* Card 2: INGRESOS HOY */}
-                  <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-sm">
-                    <div className="flex items-center gap-1.5 text-emerald-600">
-                      <DollarSign className="w-4 h-4 stroke-[2.5]" />
-                      <span className="text-[10px] font-bold uppercase tracking-wider">
-                        Ingresos hoy
-                      </span>
+                    <div className="text-3xl font-black text-emerald-600 mt-2">
+                      {totalOrdersCount}
                     </div>
-                    <div className="text-3xl font-black text-emerald-600 mt-2">$ 0</div>
-                    <span className="text-xs text-slate-400 mt-1 block">$ 0 en 7d</span>
+                    <span className="text-xs text-slate-400 mt-1 block">
+                      Ventas con ticket generado
+                    </span>
                   </div>
 
                   {/* Card 3: TICKET PROMEDIO */}
@@ -972,45 +1452,66 @@ Contacto y Soporte: soporte@markethers.com
                     <div className="flex items-center gap-1.5 text-blue-600">
                       <TrendingUp className="w-4 h-4 stroke-[2.5]" />
                       <span className="text-[10px] font-bold uppercase tracking-wider">
-                        Ticket promedio
+                        Ticket Promedio
                       </span>
                     </div>
-                    <div className="text-3xl font-black text-blue-600 mt-2">$ 0</div>
-                    <span className="text-xs text-slate-400 mt-1 block">últimos 30 días</span>
+                    <div className="text-3xl font-black text-blue-600 mt-2">
+                      $ {averageTicket}
+                    </div>
+                    <span className="text-xs text-slate-400 mt-1 block">
+                      Gasto promedio por comensal
+                    </span>
                   </div>
 
-                  {/* Card 4: INGRESOS 30D */}
+                  {/* Card 4: FACTURACIÓN ACUMULADA */}
                   <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-sm">
-                    <div className="flex items-center gap-1.5 text-emerald-600">
-                      <DollarSign className="w-4 h-4 stroke-[2.5]" />
+                    <div className="flex items-center gap-1.5 text-indigo-600">
+                      <CircleDollarSign className="w-4 h-4 stroke-[2.5]" />
                       <span className="text-[10px] font-bold uppercase tracking-wider">
-                        Ingresos 30d
+                        Facturación 30d
                       </span>
                     </div>
-                    <div className="text-3xl font-black text-emerald-600 mt-2">$ 0</div>
-                    <span className="text-xs text-slate-400 mt-1 block">Sin costos de comisión</span>
+                    <div className="text-3xl font-black text-indigo-600 mt-2">
+                      $ {total30dSales.toLocaleString()}
+                    </div>
+                    <span className="text-xs text-emerald-600 font-bold mt-1 block">
+                      ✨ $0 comisiones a apps terceras
+                    </span>
                   </div>
                 </div>
               </div>
 
-              {/* SECTION: CLIENTES Y FIDELIZACIÓN */}
+              {/* SECTION: CLIENTES Y FIDELIZACIÓN (DATOS VIVOS) */}
               <div>
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2 px-1">
-                  Clientes y fidelización
-                </span>
+                <div className="flex items-center justify-between mb-2 px-1">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    Base de Datos de Clientes & Fidelización
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection('clientes')}
+                    className="text-xs font-bold text-emerald-600 hover:underline"
+                  >
+                    Ver CRM completo ({customers.length} clientes) →
+                  </button>
+                </div>
 
                 {/* Row 1: 6 cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 mb-3.5">
-                  {/* CLIENTES */}
+                  {/* CLIENTES REGISTRADOS */}
                   <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
-                    <div className="flex items-center gap-1.5 text-slate-400">
+                    <div className="flex items-center gap-1.5 text-slate-500">
                       <Users className="w-3.5 h-3.5" />
                       <span className="text-[10px] font-bold uppercase tracking-wider">
                         Clientes
                       </span>
                     </div>
-                    <div className="text-2xl font-black text-slate-900 mt-1.5">1</div>
-                    <span className="text-[10px] text-slate-400 mt-1 block">+0 este mes</span>
+                    <div className="text-2xl font-black text-slate-900 mt-1.5">
+                      {customers.length}
+                    </div>
+                    <span className="text-[10px] text-emerald-600 font-bold mt-1 block">
+                      En base de datos
+                    </span>
                   </div>
 
                   {/* RECURRENTES */}
@@ -1021,11 +1522,15 @@ Contacto y Soporte: soporte@markethers.com
                         Recurrentes
                       </span>
                     </div>
-                    <div className="text-2xl font-black text-emerald-600 mt-1.5">0</div>
-                    <span className="text-[10px] text-slate-400 mt-1 block">≥2 pedidos</span>
+                    <div className="text-2xl font-black text-emerald-600 mt-1.5">
+                      {recurringCustomersCount}
+                    </div>
+                    <span className="text-[10px] text-slate-400 mt-1 block">
+                      ≥2 visitas ({customers.length > 0 ? Math.round((recurringCustomersCount / customers.length) * 100) : 0}%)
+                    </span>
                   </div>
 
-                  {/* TARJETAS */}
+                  {/* TARJETAS ACTIVAS */}
                   <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
                     <div className="flex items-center gap-1.5 text-emerald-600">
                       <CreditCard className="w-3.5 h-3.5" />
@@ -1033,20 +1538,28 @@ Contacto y Soporte: soporte@markethers.com
                         Tarjetas
                       </span>
                     </div>
-                    <div className="text-2xl font-black text-emerald-600 mt-1.5">2</div>
-                    <span className="text-[10px] text-slate-400 mt-1 block">Activas</span>
+                    <div className="text-2xl font-black text-emerald-600 mt-1.5">
+                      {customers.length}
+                    </div>
+                    <span className="text-[10px] text-slate-400 mt-1 block">
+                      Activas en Wallet
+                    </span>
                   </div>
 
-                  {/* PASES EN WALLET */}
+                  {/* PASES EMITIDOS */}
                   <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
                     <div className="flex items-center gap-1.5 text-emerald-600">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span className="text-[10px] font-bold uppercase tracking-wider">
-                        Pases en Wallet
+                        Pases Wallet
                       </span>
                     </div>
-                    <div className="text-2xl font-black text-emerald-600 mt-1.5">2</div>
-                    <span className="text-[10px] text-slate-400 mt-1 block">de 2 emitidos</span>
+                    <div className="text-2xl font-black text-emerald-600 mt-1.5">
+                      {customers.length}
+                    </div>
+                    <span className="text-[10px] text-slate-400 mt-1 block">
+                      Descargados 100%
+                    </span>
                   </div>
 
                   {/* APPLE VS GOOGLE */}
@@ -1054,108 +1567,470 @@ Contacto y Soporte: soporte@markethers.com
                     <div className="flex items-center gap-1.5 text-blue-600">
                       <Smartphone className="w-3.5 h-3.5" />
                       <span className="text-[10px] font-bold uppercase tracking-wider">
-                        Apple vs Google
+                        Apple / Google
                       </span>
                     </div>
                     <div className="text-xs font-bold text-slate-800 mt-2.5 flex items-center gap-2">
-                      <span>🍎 <strong>2</strong> (100%)</span>
-                      <span>🤖 <strong>0</strong> (0%)</span>
+                      <span>🍏 <strong>{appleWalletCount}</strong></span>
+                      <span>🤖 <strong>{googleWalletCount}</strong></span>
                     </div>
                   </div>
 
-                  {/* SELLOS (30D) */}
+                  {/* SELLOS OTORGADOS */}
                   <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
                     <div className="flex items-center gap-1.5 text-blue-600">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span className="text-[10px] font-bold uppercase tracking-wider">
-                        Sellos (30d)
+                        Sellos Otorgados
                       </span>
                     </div>
-                    <div className="text-2xl font-black text-blue-600 mt-1.5">0</div>
-                    <span className="text-[10px] text-slate-400 mt-1 block">Registrados</span>
+                    <div className="text-2xl font-black text-blue-600 mt-1.5">
+                      {totalStampsAwarded}
+                    </div>
+                    <span className="text-[10px] text-slate-400 mt-1 block">
+                      Acumulados
+                    </span>
                   </div>
                 </div>
 
                 {/* Row 2: 2 cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  {/* RECOMPENSAS (30D) */}
-                  <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
-                    <div className="flex items-center gap-1.5 text-emerald-600">
-                      <Gift className="w-3.5 h-3.5" />
-                      <span className="text-[10px] font-bold uppercase tracking-wider">
-                        Recompensas (30d)
+                  {/* RECOMPENSAS ENTREGADAS */}
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-1.5 text-emerald-600">
+                        <Gift className="w-3.5 h-3.5" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider">
+                          Recompensas & Premios Canjeados
+                        </span>
+                      </div>
+                      <div className="text-2xl font-black text-emerald-600 mt-1.5">
+                        {totalRewardsRedeemed} premios
+                      </div>
+                      <span className="text-[10px] text-slate-400 mt-1 block">
+                        Clientes que completaron su tarjeta y redimieron premio
                       </span>
                     </div>
-                    <div className="text-2xl font-black text-emerald-600 mt-1.5">0</div>
-                    <span className="text-[10px] text-slate-400 mt-1 block">
-                      premios canjeados con sellos
-                    </span>
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl shrink-0">
+                      🎁
+                    </div>
                   </div>
 
-                  {/* CALIFICACIÓN */}
-                  <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
-                    <div className="flex items-center gap-1.5 text-blue-600">
-                      <Star className="w-3.5 h-3.5 fill-blue-500" />
-                      <span className="text-[10px] font-bold uppercase tracking-wider">
-                        Calificación
+                  {/* GOOGLE REVIEWS & RATING */}
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-1.5 text-amber-500">
+                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700">
+                          Reputación Google Maps
+                        </span>
+                      </div>
+                      <div className="text-2xl font-black text-slate-900 mt-1.5 flex items-center gap-2">
+                        <span>{business.googleReviews.googleRating.toFixed(1)}</span>
+                        <div className="flex text-amber-400 text-sm">★★★★★</div>
+                      </div>
+                      <span className="text-[10px] text-slate-400 mt-1 block">
+                        {business.googleReviews.totalReviews} reseñas 5 estrellas verificadas
                       </span>
                     </div>
-                    <div className="text-2xl font-black text-slate-400 mt-1.5">—</div>
-                    <span className="text-[10px] text-slate-400 mt-1 block">
-                      Aún sin calificaciones
-                    </span>
+                    <a
+                      href={business.googleReviews.googleReviewUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-colors"
+                    >
+                      Ver perfil →
+                    </a>
                   </div>
                 </div>
               </div>
 
               {/* BOTTOM SECTION: TOP PRODUCTOS & ACTIVIDAD RECIENTE */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
-                {/* Left: Top productos */}
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-                  <h3 className="font-bold text-sm text-slate-800">Top productos</h3>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                {/* Left: Top productos más vendidos (5 cols) */}
+                <div className="lg:col-span-5 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+                        <span>🏆</span>
+                        <span>Platillos & Bebidas Más Vendidos</span>
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setActiveSection('menu')}
+                        className="text-xs font-bold text-emerald-600 hover:underline"
+                      >
+                        Ver menú
+                      </button>
+                    </div>
 
-                  <div className="py-12 text-center space-y-2">
-                    <div className="text-4xl">🏆</div>
-                    <h4 className="font-bold text-xs text-slate-800">Top productos</h4>
-                    <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
-                      Cuando llegue el primer pedido, aquí verás tus productos más vendidos.
-                    </p>
+                    <div className="space-y-3">
+                      {menuItems.slice(0, 4).map((item, idx) => (
+                        <div key={item.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-black text-[10px] flex items-center justify-center shrink-0">
+                              #{idx + 1}
+                            </span>
+                            <div className="min-w-0">
+                              <span className="text-xs font-bold text-slate-900 block truncate">
+                                {item.name}
+                              </span>
+                              <span className="text-[10px] text-slate-500 block">
+                                {item.category} • ${item.price}
+                              </span>
+                            </div>
+                          </div>
+                          <span className="text-xs font-black text-emerald-600 shrink-0">
+                            +{12 - idx * 3} pedidos
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
-                  <div className="pt-2 border-t border-slate-100 flex justify-center">
+                  <div className="pt-4 border-t border-slate-100 mt-4 flex items-center justify-between text-xs">
+                    <span className="text-slate-500">Total ítems en carta:</span>
+                    <span className="font-bold text-slate-900">{menuItems.length} platillos</span>
+                  </div>
+                </div>
+
+                {/* Right: Movimientos en vivo y auditoría (7 cols) */}
+                <div className="lg:col-span-7 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <span>Movimientos & Transacciones en Vivo</span>
+                        </h3>
+                        <p className="text-[11px] text-slate-400">
+                          Registro cronológico de ventas, sellos y canjes de clientes.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setActiveSection('ventas')}
+                          className="text-xs font-bold text-emerald-600 hover:underline"
+                        >
+                          Ver historial completo ({transactions.length}) →
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Movement feed */}
+                    <div className="space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
+                      {transactions.slice(0, 5).map(t => (
+                        <div
+                          key={t.id}
+                          className="p-3 rounded-xl border border-slate-100 hover:border-slate-200 bg-slate-50/70 transition-all flex items-center justify-between gap-3 text-xs"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div
+                              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                                t.type === 'REWARD_REDEEMED'
+                                  ? 'bg-amber-100 text-amber-700'
+                                  : t.notes?.includes('Venta')
+                                  ? 'bg-emerald-100 text-emerald-700'
+                                  : 'bg-blue-100 text-blue-700'
+                              }`}
+                            >
+                              {t.type === 'REWARD_REDEEMED' ? '🎁' : t.notes?.includes('Venta') ? '💰' : '⭐'}
+                            </div>
+
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-slate-900 truncate">
+                                  {t.customerName}
+                                </span>
+                                <span
+                                  className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
+                                    t.type === 'REWARD_REDEEMED'
+                                      ? 'bg-amber-100 text-amber-800'
+                                      : 'bg-emerald-100 text-emerald-800'
+                                  }`}
+                                >
+                                  {t.type === 'REWARD_REDEEMED' ? 'Premio' : 'Sello'}
+                                </span>
+                              </div>
+                              <span className="text-[11px] text-slate-500 block truncate mt-0.5">
+                                {t.notes || 'Operación en mostrador'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="text-right shrink-0">
+                            <span className="font-mono text-[11px] text-slate-400 block">
+                              {new Date(t.createdAt).toLocaleDateString('es-MX', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-medium">
+                              {t.staffName}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-100 mt-4 flex items-center justify-between text-xs">
                     <button
-                      onClick={() => setActiveSection('menu')}
-                      className="text-xs font-bold text-emerald-600 hover:underline"
+                      type="button"
+                      onClick={() => setIsRecordSaleModalOpen(true)}
+                      className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
                     >
-                      Ver platillos en carta →
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Registrar nuevo movimiento manual</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleExportSalesCSV}
+                      className="text-slate-500 hover:text-slate-800 flex items-center gap-1 font-semibold cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Exportar CSV</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* VIEW: VENTAS & MOVIMIENTOS (LEDGER FINANCIERO)             */}
+          {/* ========================================================= */}
+          {activeSection === 'ventas' && (
+            <div className="space-y-6">
+              {/* Header card with summary & stats */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
+                        <Receipt className="w-5 h-5 stroke-[2.5]" />
+                      </span>
+                      <div>
+                        <h2 className="text-lg font-black text-slate-900 tracking-tight">
+                          Libro de Ventas & Movimientos
+                        </h2>
+                        <p className="text-xs text-slate-500">
+                          Registro contable de ventas, métodos de cobro y sellos acumulados en {business.name}.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={() => setIsRecordSaleModalOpen(true)}
+                      className="flex-1 sm:flex-none px-4 py-2.5 bg-[#22c55e] hover:bg-emerald-600 text-black font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4 stroke-[3]" />
+                      <span>Registrar Cobro / Venta</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleExportSalesCSV}
+                      className="px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer"
+                      title="Descargar libro de ventas en CSV"
+                    >
+                      <Download className="w-4 h-4 text-emerald-400" />
+                      <span>Exportar CSV</span>
                     </button>
                   </div>
                 </div>
 
-                {/* Right: Actividad reciente */}
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-sm text-slate-800">Actividad reciente</h3>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      Últimos 14 días
+                {/* Financial KPI bar */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-5">
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                      Total Facturado ({dashboardPeriod === 'today' ? 'Hoy' : dashboardPeriod === '7d' ? '7 días' : dashboardPeriod === '30d' ? '30 días' : 'Histórico'})
+                    </span>
+                    <div className="text-2xl font-black text-emerald-600 mt-1">
+                      $ {totalSalesAmount.toLocaleString()}
+                    </div>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      {totalOrdersCount} tickets completados
                     </span>
                   </div>
 
-                  <div className="py-12 text-center space-y-2">
-                    <div className="text-4xl">📋</div>
-                    <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
-                      Sin actividad todavía. Aquí verás pedidos, sellos y nuevos clientes en cuanto empiecen a llegar.
-                    </p>
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                      Ticket Promedio
+                    </span>
+                    <div className="text-2xl font-black text-blue-600 mt-1">
+                      $ {averageTicket}
+                    </div>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      Por comensal
+                    </span>
                   </div>
 
-                  <div className="pt-2 border-t border-slate-100 flex justify-center">
-                    <button
-                      onClick={() => setActiveSection('escaner')}
-                      className="text-xs font-bold text-emerald-600 hover:underline"
-                    >
-                      Abrir escáner de sellos →
-                    </button>
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                      Cobrado con Tarjeta
+                    </span>
+                    <div className="text-2xl font-black text-slate-900 mt-1">
+                      $ {sales.filter(s => s.paymentMethod === 'card' || s.paymentMethod === 'apple_pay').reduce((a, s) => a + s.amount, 0).toLocaleString()}
+                    </div>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      Terminal / Stripe / Apple Pay
+                    </span>
                   </div>
+
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                      Cobrado en Efectivo
+                    </span>
+                    <div className="text-2xl font-black text-slate-900 mt-1">
+                      $ {sales.filter(s => s.paymentMethod === 'cash').reduce((a, s) => a + s.amount, 0).toLocaleString()}
+                    </div>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      Caja mostrador
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sales Table with Filters */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm">
+                <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-50/50">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-700">Filtro de período:</span>
+                    <div className="flex bg-slate-200/70 p-0.5 rounded-lg text-xs font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setDashboardPeriod('today')}
+                        className={`px-2.5 py-1 rounded-md transition-all ${dashboardPeriod === 'today' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'}`}
+                      >
+                        Hoy
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDashboardPeriod('7d')}
+                        className={`px-2.5 py-1 rounded-md transition-all ${dashboardPeriod === '7d' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'}`}
+                      >
+                        7d
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDashboardPeriod('30d')}
+                        className={`px-2.5 py-1 rounded-md transition-all ${dashboardPeriod === '30d' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'}`}
+                      >
+                        30d
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDashboardPeriod('all')}
+                        className={`px-2.5 py-1 rounded-md transition-all ${dashboardPeriod === 'all' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'}`}
+                      >
+                        Histórico ({sales.length})
+                      </button>
+                    </div>
+                  </div>
+
+                  <span className="text-xs text-slate-500 font-medium">
+                    Mostrando <strong>{filteredSales.length}</strong> de {sales.length} ventas registradas
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider border-b border-slate-200">
+                      <tr>
+                        <th className="py-3 px-4 font-bold">Folio / Fecha</th>
+                        <th className="py-3 px-4 font-bold">Cliente</th>
+                        <th className="py-3 px-4 font-bold">Detalle del Consumo</th>
+                        <th className="py-3 px-4 font-bold">Método de Pago</th>
+                        <th className="py-3 px-4 font-bold text-right">Monto</th>
+                        <th className="py-3 px-4 font-bold text-center">Sellos</th>
+                        <th className="py-3 px-4 font-bold">Atendido por</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                      {filteredSales.map(s => (
+                        <tr key={s.id} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="py-3.5 px-4 font-mono text-slate-500">
+                            <span className="font-bold text-slate-800 block">#{s.id.slice(-6).toUpperCase()}</span>
+                            <span className="text-[10px]">
+                              {new Date(s.createdAt).toLocaleDateString('es-MX', {
+                                day: 'numeric',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                          </td>
+
+                          <td className="py-3.5 px-4 font-bold text-slate-900">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] flex items-center justify-center shrink-0">
+                                {s.customerName.charAt(0)}
+                              </div>
+                              <div>
+                                <span>{s.customerName}</span>
+                                {s.customerPhone && (
+                                  <span className="text-[10px] text-slate-400 font-mono block">
+                                    {s.customerPhone}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4 text-slate-700 font-medium max-w-xs truncate">
+                            {s.itemsSummary}
+                          </td>
+
+                          <td className="py-3.5 px-4">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                              {s.paymentMethod === 'card' && '💳 Tarjeta'}
+                              {s.paymentMethod === 'apple_pay' && '🍏 Apple Pay'}
+                              {s.paymentMethod === 'cash' && '💵 Efectivo'}
+                              {s.paymentMethod === 'transfer' && '📲 SPEI / Transf.'}
+                            </span>
+                          </td>
+
+                          <td className="py-3.5 px-4 text-right font-black text-slate-900 text-sm">
+                            $ {s.amount.toFixed(2)}
+                          </td>
+
+                          <td className="py-3.5 px-4 text-center">
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-black text-[11px] border border-emerald-200">
+                              +{s.stampsAwarded} ⭐
+                            </span>
+                          </td>
+
+                          <td className="py-3.5 px-4 text-slate-500 font-medium">
+                            {s.staffName}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  {filteredSales.length === 0 && (
+                    <div className="p-12 text-center space-y-3">
+                      <div className="text-4xl">🧾</div>
+                      <h4 className="font-bold text-sm text-slate-800">
+                        No hay ventas registradas en este período
+                      </h4>
+                      <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                        Registra una venta con el botón verde superior para ver el desglose en tiempo real.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setIsRecordSaleModalOpen(true)}
+                        className="px-4 py-2 bg-[#22c55e] text-black font-extrabold text-xs rounded-xl shadow-md shadow-emerald-500/20"
+                      >
+                        + Registrar primera venta
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1281,84 +2156,270 @@ Contacto y Soporte: soporte@markethers.com
           )}
 
           {/* ========================================================= */}
-          {/* VIEW: CLIENTES (CRM DE SOCIOS REGISTRADOS)                */}
+          {/* VIEW: BASE DE DATOS DE CLIENTES & CRM                     */}
           {/* ========================================================= */}
           {activeSection === 'clientes' && (
-            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-              <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div>
-                  <h3 className="font-bold text-base text-slate-900">Base de Datos de Clientes & CRM</h3>
-                  <p className="text-xs text-slate-500">
-                    Comensales registrados con tarjeta de fidelización en Apple Wallet y Google Wallet.
-                  </p>
+            <div className="space-y-6">
+              {/* Header card */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="p-2 rounded-xl bg-blue-50 text-blue-600">
+                        <Users className="w-5 h-5 stroke-[2.5]" />
+                      </span>
+                      <div>
+                        <h2 className="text-lg font-black text-slate-900 tracking-tight">
+                          Base de Datos de Clientes (CRM)
+                        </h2>
+                        <p className="text-xs text-slate-500">
+                          Directorio centralizado de comensales con tarjeta instalada en Apple & Google Wallet para {business.name}.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={() => setIsNewCustomerModalOpen(true)}
+                      className="flex-1 sm:flex-none px-4 py-2.5 bg-[#22c55e] hover:bg-emerald-600 text-black font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4 stroke-[3]" />
+                      <span>+ Nuevo Cliente</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleExportCSV}
+                      className="px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer"
+                      title="Descargar base de datos en CSV / Excel"
+                    >
+                      <Download className="w-4 h-4 text-emerald-400" />
+                      <span>Exportar CSV</span>
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold px-3 py-1 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200">
-                    {customers.length} Clientes activos
-                  </span>
-                  <button
-                    onClick={handleExportCSV}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-sm transition-all"
-                    title="Descargar base de datos en CSV / Excel"
-                  >
-                    <Download className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Exportar CSV</span>
-                  </button>
+                {/* Customer KPI metrics */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-5">
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                      Total Clientes
+                    </span>
+                    <div className="text-2xl font-black text-slate-900 mt-1">
+                      {customers.length}
+                    </div>
+                    <span className="text-[10px] text-emerald-600 font-bold mt-0.5 block">
+                      Pases Wallet activos
+                    </span>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                      Clientes VIP
+                    </span>
+                    <div className="text-2xl font-black text-amber-600 mt-1">
+                      {customers.filter(c => c.tier === 'vip' || (c.totalSpent || 0) > 500).length}
+                    </div>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      Alto ticket y lealtad
+                    </span>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                      Clientes Recurrentes
+                    </span>
+                    <div className="text-2xl font-black text-emerald-600 mt-1">
+                      {recurringCustomersCount}
+                    </div>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      ≥2 visitas ({customers.length > 0 ? Math.round((recurringCustomersCount / customers.length) * 100) : 0}%)
+                    </span>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                      Consumo Total Clientes
+                    </span>
+                    <div className="text-2xl font-black text-indigo-600 mt-1">
+                      $ {customers.reduce((acc, c) => acc + (c.totalSpent || 0), 0).toLocaleString()}
+                    </div>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      Facturado acumulado
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider border-b border-slate-200">
-                    <tr>
-                      <th className="py-3 px-4 font-bold">Cliente</th>
-                      <th className="py-3 px-4 font-bold">Teléfono / Móvil</th>
-                      <th className="py-3 px-4 font-bold">Código Wallet</th>
-                      <th className="py-3 px-4 font-bold">Sellos acumulados</th>
-                      <th className="py-3 px-4 font-bold">Visitas totales</th>
-                      <th className="py-3 px-4 font-bold text-right">Contacto directo</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-slate-700">
-                    {customers.map(c => (
-                      <tr key={c.id} className="hover:bg-slate-50/80">
-                        <td className="py-3.5 px-4 font-bold text-slate-900 flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-bold text-[10px] flex items-center justify-center">
-                            {c.name.charAt(0)}
-                          </div>
-                          <span>{c.name}</span>
-                        </td>
-                        <td className="py-3.5 px-4 font-mono text-slate-600">{c.phone}</td>
-                        <td className="py-3.5 px-4 font-mono text-slate-500">{c.qrCodeToken}</td>
-                        <td className="py-3.5 px-4 font-bold text-emerald-600">
-                          {c.currentStamps} de {business.loyaltyConfig.totalStamps} sellos
-                        </td>
-                        <td className="py-3.5 px-4 font-semibold">{c.totalVisits} visitas</td>
-                        <td className="py-3.5 px-4 text-right flex items-center justify-end gap-1.5">
-                          <a
-                            href={`tel:${c.phone}`}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs shadow-sm transition-colors"
-                            title="Llamar al cliente"
-                          >
-                            <Phone className="w-3.5 h-3.5" />
-                            <span>Llamar</span>
-                          </a>
-                          <a
-                            href={`https://wa.me/${c.phone.replace(/\D/g, '')}?text=¡Hola ${c.name}! Te escribimos de ${business.name}.`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#22c55e] hover:bg-emerald-600 text-white font-bold rounded-lg text-xs shadow-sm transition-colors"
-                            title="Enviar mensaje directo"
-                          >
-                            <MessageCircle className="w-3.5 h-3.5" />
-                            <span>Mensaje</span>
-                          </a>
-                        </td>
+              {/* Table with search and filter */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm">
+                <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-slate-50/50">
+                  {/* Search bar */}
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Buscar por nombre, teléfono o código Wallet..."
+                      value={customerSearchQuery}
+                      onChange={e => setCustomerSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  {/* Tier filter */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-700">Filtrar:</span>
+                    <div className="flex bg-slate-200/70 p-0.5 rounded-lg text-xs font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setCustomerFilterTier('all')}
+                        className={`px-2.5 py-1 rounded-md transition-all ${customerFilterTier === 'all' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'}`}
+                      >
+                        Todos ({customers.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCustomerFilterTier('vip')}
+                        className={`px-2.5 py-1 rounded-md transition-all ${customerFilterTier === 'vip' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'}`}
+                      >
+                        VIP
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCustomerFilterTier('frecuente')}
+                        className={`px-2.5 py-1 rounded-md transition-all ${customerFilterTier === 'frecuente' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'}`}
+                      >
+                        Recurrentes
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCustomerFilterTier('nuevo')}
+                        className={`px-2.5 py-1 rounded-md transition-all ${customerFilterTier === 'nuevo' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'}`}
+                      >
+                        Nuevos
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider border-b border-slate-200">
+                      <tr>
+                        <th className="py-3 px-4 font-bold">Cliente</th>
+                        <th className="py-3 px-4 font-bold">Teléfono / Móvil</th>
+                        <th className="py-3 px-4 font-bold">Pase Wallet</th>
+                        <th className="py-3 px-4 font-bold">Consumo Total</th>
+                        <th className="py-3 px-4 font-bold">Sellos de Lealtad</th>
+                        <th className="py-3 px-4 font-bold">Visitas</th>
+                        <th className="py-3 px-4 font-bold text-right">Acciones</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                      {customers
+                        .filter(c => {
+                          if (customerFilterTier !== 'all' && c.tier !== customerFilterTier) return false;
+                          if (!customerSearchQuery.trim()) return true;
+                          const q = customerSearchQuery.toLowerCase();
+                          return (
+                            c.name.toLowerCase().includes(q) ||
+                            c.phone.toLowerCase().includes(q) ||
+                            c.qrCodeToken.toLowerCase().includes(q)
+                          );
+                        })
+                        .map(c => {
+                          const target = business.loyaltyConfig.totalStamps;
+                          const pct = Math.min(100, Math.round((c.currentStamps / target) * 100));
+                          return (
+                            <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="py-3.5 px-4 font-bold text-slate-900">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-500 text-zinc-950 font-black text-[11px] flex items-center justify-center shrink-0">
+                                    {c.name.charAt(0)}
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-1.5">
+                                      <span>{c.name}</span>
+                                      {c.tier === 'vip' && (
+                                        <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[9px] font-black uppercase">
+                                          VIP
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span className="text-[10px] text-slate-400 font-normal block">
+                                      {c.email || 'Sin correo registrado'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </td>
+
+                              <td className="py-3.5 px-4 font-mono text-slate-600">
+                                {c.phone}
+                              </td>
+
+                              <td className="py-3.5 px-4">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                  {c.walletPassType === 'google' ? '🤖 Google' : '🍏 Apple'} • {c.qrCodeToken.slice(-4)}
+                                </span>
+                              </td>
+
+                              <td className="py-3.5 px-4 font-bold text-slate-900">
+                                $ {(c.totalSpent || 0).toLocaleString()}
+                              </td>
+
+                              <td className="py-3.5 px-4">
+                                <div className="space-y-1">
+                                  <div className="flex items-center justify-between text-[10px]">
+                                    <span className="font-bold text-emerald-600">
+                                      {c.currentStamps} de {target} sellos
+                                    </span>
+                                    <span className="text-slate-400">{pct}%</span>
+                                  </div>
+                                  <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full bg-emerald-500 rounded-full transition-all"
+                                      style={{ width: `${pct}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              </td>
+
+                              <td className="py-3.5 px-4 font-semibold text-slate-800">
+                                <div>{c.totalVisits} visitas</div>
+                                <span className="text-[10px] text-slate-400 block font-normal">
+                                  {new Date(c.lastVisitAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+                                </span>
+                              </td>
+
+                              <td className="py-3.5 px-4 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedCustomerDetail(c)}
+                                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-lg text-xs transition-colors cursor-pointer"
+                                    title="Ver ficha completa e historial"
+                                  >
+                                    Ver Ficha
+                                  </button>
+
+                                  <a
+                                    href={`https://wa.me/${c.phone.replace(/\D/g, '')}?text=¡Hola ${c.name}! Te escribimos de ${business.name}.`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-1.5 bg-[#22c55e] hover:bg-emerald-600 text-white font-bold rounded-lg text-xs transition-colors"
+                                    title="WhatsApp directo"
+                                  >
+                                    <MessageCircle className="w-3.5 h-3.5" />
+                                  </a>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
@@ -2588,6 +3649,499 @@ Contacto y Soporte: soporte@markethers.com
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Registrar Venta / Cobro Manual */}
+      {isRecordSaleModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 text-slate-900 shadow-2xl relative">
+            <button
+              onClick={() => setIsRecordSaleModalOpen(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 rounded-full"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                <Receipt className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-black text-lg">Registrar Venta / Movimiento</h3>
+                <span className="text-xs text-slate-500 block">
+                  Registra el cobro en caja y suma sellos de fidelización al cliente.
+                </span>
+              </div>
+            </div>
+
+            <form onSubmit={handleRecordSale} className="space-y-4 mt-5">
+              {/* Cliente selector */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Cliente Registrado (Opcional)
+                </label>
+                <select
+                  value={saleCustomerId}
+                  onChange={e => {
+                    const id = e.target.value;
+                    setSaleCustomerId(id);
+                    if (id) {
+                      const c = customers.find(item => item.id === id);
+                      if (c) {
+                        setSaleCustomerName(c.name);
+                        setSaleCustomerPhone(c.phone);
+                      }
+                    } else {
+                      setSaleCustomerName('');
+                      setSaleCustomerPhone('');
+                    }
+                  }}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none"
+                >
+                  <option value="">Comensal mostrador / Anónimo</option>
+                  {customers.map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.phone}) • {c.currentStamps}/{business.loyaltyConfig.totalStamps} sellos
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {!saleCustomerId && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      Nombre del Cliente (Mostrador)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="ej. Carlos / Mesa 2"
+                      value={saleCustomerName}
+                      onChange={e => setSaleCustomerName(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      Teléfono de Contacto
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="ej. +52 55 1234 5678"
+                      value={saleCustomerPhone}
+                      onChange={e => setSaleCustomerPhone(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Monto & Sellos */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Monto de la Venta ($) *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
+                    <input
+                      type="number"
+                      step="any"
+                      required
+                      placeholder="0.00"
+                      value={saleAmount}
+                      onChange={e => setSaleAmount(e.target.value)}
+                      className="w-full pl-7 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Sellos a Otorgar *
+                  </label>
+                  <select
+                    value={saleStampsToAward}
+                    onChange={e => setSaleStampsToAward(Number(e.target.value))}
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-emerald-700 outline-none"
+                  >
+                    {[1, 2, 3, 4, 5, 6].map(n => (
+                      <option key={n} value={n}>
+                        +{n} Sello(s) de fidelización
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Items summary */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Concepto / Detalle del Consumo *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="ej. 2x Mezcalitas Artesanales, 1x Tacos de Birria"
+                  value={saleItemsSummary}
+                  onChange={e => setSaleItemsSummary(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20"
+                />
+              </div>
+
+              {/* Payment method */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Método de Pago
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSalePaymentMethod('card')}
+                    className={`py-2 px-2 text-center rounded-xl border text-xs font-bold transition-all ${
+                      salePaymentMethod === 'card'
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
+                        : 'border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    💳 Tarjeta
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSalePaymentMethod('cash')}
+                    className={`py-2 px-2 text-center rounded-xl border text-xs font-bold transition-all ${
+                      salePaymentMethod === 'cash'
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
+                        : 'border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    💵 Efectivo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSalePaymentMethod('apple_pay')}
+                    className={`py-2 px-2 text-center rounded-xl border text-xs font-bold transition-all ${
+                      salePaymentMethod === 'apple_pay'
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
+                        : 'border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    🍏 Apple Pay
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSalePaymentMethod('transfer')}
+                    className={`py-2 px-2 text-center rounded-xl border text-xs font-bold transition-all ${
+                      salePaymentMethod === 'transfer'
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
+                        : 'border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    📲 Transf.
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsRecordSaleModalOpen(false)}
+                  className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 bg-[#22c55e] hover:bg-emerald-600 text-black font-extrabold text-xs rounded-xl shadow-md shadow-emerald-500/20 flex items-center justify-center gap-2"
+                >
+                  <Check className="w-4 h-4 stroke-[3]" />
+                  <span>Guardar Venta & Otorgar Sellos</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Registrar Nuevo Cliente en Base de Datos */}
+      {isNewCustomerModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 text-slate-900 shadow-2xl relative">
+            <button
+              onClick={() => setIsNewCustomerModalOpen(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 rounded-full"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-black text-lg">Nuevo Cliente en Base de Datos</h3>
+                <span className="text-xs text-slate-500 block">
+                  Genera la tarjeta de lealtad y activa su pase de Wallet.
+                </span>
+              </div>
+            </div>
+
+            <form onSubmit={handleAddNewCustomer} className="space-y-4 mt-5">
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Nombre Completo del Cliente *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="ej. Valentina Flores"
+                  value={newCustomerName}
+                  onChange={e => setNewCustomerName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Teléfono / WhatsApp *
+                </label>
+                <input
+                  type="tel"
+                  required
+                  placeholder="ej. +52 55 1234 5678"
+                  value={newCustomerPhone}
+                  onChange={e => setNewCustomerPhone(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Correo Electrónico (Opcional)
+                </label>
+                <input
+                  type="email"
+                  placeholder="ej. cliente@email.com"
+                  value={newCustomerEmail}
+                  onChange={e => setNewCustomerEmail(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Sellos Iniciales
+                  </label>
+                  <select
+                    value={newCustomerInitialStamps}
+                    onChange={e => setNewCustomerInitialStamps(Number(e.target.value))}
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none"
+                  >
+                    <option value={1}>1 Sello (Bienvenida)</option>
+                    <option value={2}>2 Sellos</option>
+                    <option value={3}>3 Sellos</option>
+                    <option value={4}>4 Sellos</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Dispositivo Preferido
+                  </label>
+                  <select
+                    value={newCustomerWalletType}
+                    onChange={e => setNewCustomerWalletType(e.target.value as any)}
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none"
+                  >
+                    <option value="apple">🍏 Apple Wallet</option>
+                    <option value="google">🤖 Google Wallet</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Notas sobre el Cliente
+                </label>
+                <input
+                  type="text"
+                  placeholder="ej. Cliente frecuente, prefiere mesa en terraza"
+                  value={newCustomerNotes}
+                  onChange={e => setNewCustomerNotes(e.target.value)}
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none"
+                />
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsNewCustomerModalOpen(false)}
+                  className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl shadow-md flex items-center justify-center gap-2"
+                >
+                  <Plus className="w-4 h-4 text-emerald-400 stroke-[3]" />
+                  <span>Registrar en CRM</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Expediente & Ficha Detallada del Cliente */}
+      {selectedCustomerDetail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-xl w-full p-6 text-slate-900 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setSelectedCustomerDetail(null)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 rounded-full"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Profile header */}
+            <div className="flex items-center gap-3.5 pb-4 border-b border-slate-100">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-400 to-teal-500 text-zinc-950 font-black text-lg flex items-center justify-center shadow-md">
+                {selectedCustomerDetail.name.charAt(0)}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-black text-lg text-slate-900">
+                    {selectedCustomerDetail.name}
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black uppercase">
+                    {selectedCustomerDetail.tier || 'Frecuente'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-xs text-slate-500 font-mono mt-0.5">
+                  <span>{selectedCustomerDetail.phone}</span>
+                  <span>•</span>
+                  <span>{selectedCustomerDetail.qrCodeToken}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick stats grid */}
+            <div className="grid grid-cols-3 gap-3 my-4">
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Sellos Actuales
+                </span>
+                <span className="text-xl font-black text-emerald-600 mt-1 block">
+                  {selectedCustomerDetail.currentStamps} de {business.loyaltyConfig.totalStamps}
+                </span>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Total Visitas
+                </span>
+                <span className="text-xl font-black text-slate-900 mt-1 block">
+                  {selectedCustomerDetail.totalVisits}
+                </span>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Gasto Acumulado
+                </span>
+                <span className="text-xl font-black text-indigo-600 mt-1 block">
+                  $ {(selectedCustomerDetail.totalSpent || 0).toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            {/* Loyalty card preview */}
+            <div className="p-4 rounded-2xl bg-[#0a111a] text-white my-4 relative overflow-hidden">
+              <div className="flex items-center justify-between text-xs mb-3">
+                <span className="font-bold flex items-center gap-1.5 text-emerald-400">
+                  <CreditCard className="w-4 h-4" />
+                  <span>Pase Oficial de {business.name}</span>
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {selectedCustomerDetail.walletPassType === 'google' ? 'Google Wallet' : 'Apple Wallet'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Premio</span>
+                  <span className="text-sm font-bold text-white block mt-0.5">
+                    {business.loyaltyConfig.rewardTitle}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-2xl font-black text-emerald-400">
+                    {selectedCustomerDetail.currentStamps}/{business.loyaltyConfig.totalStamps}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Historial de movimientos de este cliente */}
+            <div>
+              <h4 className="font-bold text-xs text-slate-700 uppercase tracking-wider mb-2">
+                Historial de Visitas y Compras
+              </h4>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {transactions
+                  .filter(t => t.customerId === selectedCustomerDetail.id || t.customerName === selectedCustomerDetail.name)
+                  .map(t => (
+                    <div key={t.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
+                      <div>
+                        <span className="font-bold text-slate-800 block">
+                          {t.notes || (t.type === 'REWARD_REDEEMED' ? 'Premio canjeado' : '+1 Sello')}
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          {new Date(t.createdAt).toLocaleString('es-MX')}
+                        </span>
+                      </div>
+                      <span className="font-bold text-emerald-600">
+                        {t.type === 'REWARD_REDEEMED' ? '🎁 Canje' : `+${t.stampsChanged} sellos`}
+                      </span>
+                    </div>
+                  ))}
+                {transactions.filter(t => t.customerId === selectedCustomerDetail.id || t.customerName === selectedCustomerDetail.name).length === 0 && (
+                  <p className="text-xs text-slate-400 py-3 text-center">
+                    Sin transacciones previas registradas.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="pt-4 border-t border-slate-100 mt-4 flex items-center gap-3">
+              <a
+                href={`https://wa.me/${selectedCustomerDetail.phone.replace(/\D/g, '')}?text=¡Hola ${selectedCustomerDetail.name}! Te escribimos de ${business.name}.`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 py-2.5 bg-[#22c55e] hover:bg-emerald-600 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>Contactar por WhatsApp</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCustomerDetail(null);
+                  setSaleCustomerId(selectedCustomerDetail.id);
+                  setSaleCustomerName(selectedCustomerDetail.name);
+                  setSaleCustomerPhone(selectedCustomerDetail.phone);
+                  setIsRecordSaleModalOpen(true);
+                }}
+                className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm"
+              >
+                <Receipt className="w-4 h-4 text-emerald-400" />
+                <span>Registrar Venta a Cliente</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
