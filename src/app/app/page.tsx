@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { INITIAL_BUSINESSES, INITIAL_CUSTOMERS, INITIAL_MENU_ITEMS, INITIAL_TRANSACTIONS, INITIAL_SALES } from '@/lib/store';
-import { Business, Customer, MenuItem, StampTransaction, SaleRecord } from '@/types';
+import { INITIAL_BUSINESSES, INITIAL_CUSTOMERS, INITIAL_MENU_ITEMS, INITIAL_TRANSACTIONS, INITIAL_SALES, INITIAL_MERCHANT_CLIENTS } from '@/lib/store';
+import { Business, Customer, MenuItem, StampTransaction, SaleRecord, MerchantClientAccount } from '@/types';
 import { getCurrentUser, logoutUser, UserAccount, isOwnerUser } from '@/lib/auth';
 import { AppleWalletCard } from '@/components/AppleWalletCard';
 import { CameraScanner } from '@/components/CameraScanner';
@@ -63,6 +63,13 @@ import {
   ArrowUpRight,
   Wallet,
   Printer,
+  Building,
+  Wrench,
+  KeyRound,
+  AlertTriangle,
+  Clock,
+  RefreshCw,
+  UserCheck,
 } from 'lucide-react';
 
 export default function MarkethersAppPortal() {
@@ -87,6 +94,7 @@ export default function MarkethersAppPortal() {
   // Active navigation section
   const [activeSection, setActiveSection] = useState<
     | 'panel'
+    | 'comercios'
     | 'ventas'
     | 'tarjetas'
     | 'clientes'
@@ -104,6 +112,27 @@ export default function MarkethersAppPortal() {
     | 'infolink'
     | 'facturacion'
   >('panel');
+
+  // Master SaaS Merchant Portfolio & Technical Support Impersonation State
+  const [merchantClients, setMerchantClients] = useState<MerchantClientAccount[]>(INITIAL_MERCHANT_CLIENTS);
+  const [impersonatedMerchant, setImpersonatedMerchant] = useState<MerchantClientAccount | null>(null);
+  const [merchantFilterStatus, setMerchantFilterStatus] = useState<'all' | 'active' | 'trialing' | 'past_due' | 'cancelled'>('all');
+  const [merchantSearchQuery, setMerchantSearchQuery] = useState('');
+
+  // Modals for Merchant Portfolio Management
+  const [editingMerchantBilling, setEditingMerchantBilling] = useState<MerchantClientAccount | null>(null);
+  const [isNewMerchantModalOpen, setIsNewMerchantModalOpen] = useState(false);
+  const [newMerchantBusinessName, setNewMerchantBusinessName] = useState('');
+  const [newMerchantOwnerName, setNewMerchantOwnerName] = useState('');
+  const [newMerchantEmail, setNewMerchantEmail] = useState('');
+  const [newMerchantPhone, setNewMerchantPhone] = useState('');
+  const [newMerchantCity, setNewMerchantCity] = useState('');
+  const [newMerchantCategory, setNewMerchantCategory] = useState('Restaurante');
+  const [newMerchantPlan, setNewMerchantPlan] = useState<'starter' | 'pro' | 'franchise'>('pro');
+  const [newMerchantStatus, setNewMerchantStatus] = useState<'active' | 'trialing' | 'past_due'>('trialing');
+  const [newMerchantAmountDue, setNewMerchantAmountDue] = useState('0');
+  const [newMerchantTotalPaid, setNewMerchantTotalPaid] = useState('0');
+  const [newMerchantNotes, setNewMerchantNotes] = useState('');
 
   // Customer, Sales & Menu Database State (persisted in localStorage)
   const [allCustomers, setAllCustomers] = useState<Customer[]>(INITIAL_CUSTOMERS);
@@ -196,6 +225,53 @@ export default function MarkethersAppPortal() {
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
     link.setAttribute('download', `base_datos_clientes_${business.slug}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportMerchantsCSV = () => {
+    const headers = [
+      'ID',
+      'Negocio',
+      'Propietario',
+      'Email',
+      'Telefono',
+      'Ciudad',
+      'Categoria',
+      'Estado',
+      'Plan',
+      'Lo Que Pagan (USD/mes)',
+      'Ciclo Facturacion',
+      'Lo Que Pagaron (USD)',
+      'Lo Que Deben (USD)',
+      'Proxima Facturacion',
+      'Fecha Registro',
+      'Notas',
+    ];
+    const rows = merchantClients.map(m => [
+      `"${m.id}"`,
+      `"${m.businessName}"`,
+      `"${m.ownerName}"`,
+      `"${m.email}"`,
+      `"${m.phone}"`,
+      `"${m.city}"`,
+      `"${m.category}"`,
+      `"${m.status}"`,
+      `"${m.planName}"`,
+      m.monthlyPrice,
+      `"${m.billingCycle}"`,
+      m.totalPaid,
+      m.amountDue,
+      `"${m.nextBillingDate}"`,
+      `"${m.createdAt}"`,
+      `"${m.notes || ''}"`,
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `cartera_clientes_saas_markethers_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -310,12 +386,208 @@ export default function MarkethersAppPortal() {
         localStorage.setItem('markethers_menu_items_db', JSON.stringify(INITIAL_MENU_ITEMS));
       }
 
+      // Load or initialize SaaS Merchant Clients DB
+      const storedMerchants = localStorage.getItem('markethers_merchant_clients_db');
+      if (storedMerchants) {
+        try {
+          setMerchantClients(JSON.parse(storedMerchants));
+        } catch {
+          setMerchantClients(INITIAL_MERCHANT_CLIENTS);
+        }
+      } else {
+        localStorage.setItem('markethers_merchant_clients_db', JSON.stringify(INITIAL_MERCHANT_CLIENTS));
+      }
+
       setCurrentTimestamp(Date.now());
     } catch (e) {
       console.error(e);
       setAuthChecking(false);
     }
   }, [router]);
+
+  const saveMerchantClientsList = (updated: MerchantClientAccount[]) => {
+    setMerchantClients(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('markethers_merchant_clients_db', JSON.stringify(updated));
+    }
+  };
+
+  const handleUpdateMerchantBilling = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMerchantBilling) return;
+    const updated = merchantClients.map(m => {
+      if (m.id === editingMerchantBilling.id) {
+        return editingMerchantBilling;
+      }
+      return m;
+    });
+    saveMerchantClientsList(updated);
+    setEditingMerchantBilling(null);
+  };
+
+  const handleQuickMarkPaid = (client: MerchantClientAccount) => {
+    const updated = merchantClients.map(m => {
+      if (m.id === client.id) {
+        return {
+          ...m,
+          totalPaid: Number(m.totalPaid) + Number(m.amountDue),
+          amountDue: 0,
+          status: (m.status === 'past_due' ? 'active' : m.status) as 'active' | 'trialing' | 'past_due' | 'cancelled',
+          notes: `${m.notes || ''} [Cobro registrado ${new Date().toLocaleDateString('es-ES')}]`.trim(),
+        };
+      }
+      return m;
+    });
+    saveMerchantClientsList(updated);
+  };
+
+  const handleCreateNewMerchant = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMerchantBusinessName.trim() || !newMerchantOwnerName.trim()) return;
+
+    const planNames: Record<string, string> = {
+      starter: 'Plan Despegue',
+      pro: 'Plan Pro Markethers',
+      franchise: 'Plan Multi-Sucursal',
+    };
+    const planPrices: Record<string, number> = {
+      starter: 29,
+      pro: 49,
+      franchise: 99,
+    };
+
+    const newClient: MerchantClientAccount = {
+      id: `merch_${Date.now()}`,
+      businessId: `biz_${Date.now()}`,
+      businessName: newMerchantBusinessName.trim(),
+      ownerName: newMerchantOwnerName.trim(),
+      email: newMerchantEmail.trim().toLowerCase(),
+      phone: newMerchantPhone.trim() || '+52 55 0000 0000',
+      city: newMerchantCity.trim() || 'Ciudad de México',
+      category: newMerchantCategory,
+      status: newMerchantStatus,
+      planId: newMerchantPlan,
+      planName: planNames[newMerchantPlan] || 'Plan Pro Markethers',
+      billingCycle: 'monthly',
+      monthlyPrice: planPrices[newMerchantPlan] || 49,
+      totalPaid: parseFloat(newMerchantTotalPaid) || 0,
+      amountDue: parseFloat(newMerchantAmountDue) || 0,
+      nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      createdAt: new Date().toISOString(),
+      lastLoginAt: new Date().toISOString(),
+      cardLast4: '4242',
+      cardBrand: 'Visa',
+      notes: newMerchantNotes.trim() || 'Comercio agregado manualmente por el Propietario.',
+    };
+
+    // Provision matching Business entry
+    const newBiz: Business = {
+      id: newClient.businessId,
+      slug: newClient.businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+      name: newClient.businessName,
+      tagline: newClient.category,
+      description: `Comercio gestionado en Markethers - ${newClient.city}`,
+      category: newClient.category,
+      logoUrl: '🏢',
+      coverUrl: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80',
+      phone: newClient.phone,
+      whatsapp: newClient.phone.replace(/\D/g, ''),
+      instagram: '',
+      address: newClient.city,
+      city: newClient.city,
+      pinCode: '1234',
+      currency: '$',
+      loyaltyConfig: {
+        totalStamps: 6,
+        rewardTitle: 'Recompensa de Fidelidad',
+        rewardDescription: 'Válido al completar 6 sellos en tu celular.',
+        stampIcon: 'gift',
+        cardBgColor: '#0a111a',
+        cardTextColor: '#ffffff',
+        accentColor: '#22c55e',
+        terms: 'Un sello por consumo.',
+        allowCashback: false,
+      },
+      googleReviews: {
+        googleReviewUrl: 'https://search.google.com/',
+        googleRating: 5.0,
+        totalReviews: 5,
+        rewardForReview: '+1 Sello extra',
+        smartFilterEnabled: true,
+      },
+      menuDisplayMode: 'both',
+    };
+
+    setBusinesses(prev => [newBiz, ...prev]);
+    if (typeof window !== 'undefined') {
+      const existingBizList = JSON.parse(localStorage.getItem('markethers_custom_businesses') || '[]');
+      localStorage.setItem('markethers_custom_businesses', JSON.stringify([...existingBizList, newBiz]));
+    }
+
+    saveMerchantClientsList([newClient, ...merchantClients]);
+    setIsNewMerchantModalOpen(false);
+    setNewMerchantBusinessName('');
+    setNewMerchantOwnerName('');
+    setNewMerchantEmail('');
+    setNewMerchantPhone('');
+    setNewMerchantCity('');
+    setNewMerchantNotes('');
+    setNewMerchantAmountDue('0');
+    setNewMerchantTotalPaid('0');
+  };
+
+  const handleImpersonate = (client: MerchantClientAccount) => {
+    const existing = businesses.find(b => b.id === client.businessId);
+    if (!existing) {
+      const mockBiz: Business = {
+        id: client.businessId,
+        slug: client.businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+        name: client.businessName,
+        tagline: client.category,
+        description: `Comercio gestionado en Markethers - ${client.city}`,
+        category: client.category,
+        logoUrl: '🏢',
+        coverUrl: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80',
+        phone: client.phone,
+        whatsapp: client.phone.replace(/\D/g, ''),
+        instagram: '',
+        address: client.city,
+        city: client.city,
+        pinCode: '1234',
+        currency: '$',
+        loyaltyConfig: {
+          totalStamps: 6,
+          rewardTitle: 'Recompensa de Fidelidad',
+          rewardDescription: 'Válido al completar 6 sellos en tu celular.',
+          stampIcon: 'gift',
+          cardBgColor: '#0a111a',
+          cardTextColor: '#ffffff',
+          accentColor: '#22c55e',
+          terms: 'Un sello por consumo.',
+          allowCashback: false,
+        },
+        googleReviews: {
+          googleReviewUrl: 'https://search.google.com/',
+          googleRating: 5.0,
+          totalReviews: 10,
+          rewardForReview: '+1 Sello extra',
+          smartFilterEnabled: true,
+        },
+        menuDisplayMode: 'both',
+      };
+      setBusinesses(prev => [mockBiz, ...prev]);
+    }
+
+    setSelectedBusinessId(client.businessId);
+    setImpersonatedMerchant(client);
+    setActiveSection('panel');
+  };
+
+  const handleExitImpersonation = () => {
+    setImpersonatedMerchant(null);
+    setSelectedBusinessId(INITIAL_BUSINESSES[0].id);
+    setActiveSection('comercios');
+  };
 
   const handleSelectPlan = (planId: 'starter' | 'pro' | 'franchise') => {
     const planDetails = {
@@ -832,7 +1104,7 @@ Contacto y Soporte: soporte@markethers.com
           </div>
 
           {/* MAIN BUTTON: PANEL (GREEN PILL) */}
-          <div className="mb-4">
+          <div className="mb-2">
             <button
               onClick={() => {
                 setActiveSection('panel');
@@ -848,6 +1120,33 @@ Contacto y Soporte: soporte@markethers.com
               <span>{isOwner ? 'Panel Ejecutivo Dueño' : 'Panel de mi Negocio'}</span>
             </button>
           </div>
+
+          {/* EXCLUSIVE OWNER / MANAGER SAAS CLIENTS PORTFOLIO */}
+          {isOwner && (
+            <div className="mb-4">
+              <button
+                onClick={() => {
+                  setActiveSection('comercios');
+                  setMobileSidebarOpen(false);
+                }}
+                className={`w-full py-2.5 px-3.5 rounded-xl flex items-center justify-between text-xs font-bold transition-all shadow-md ${
+                  activeSection === 'comercios'
+                    ? 'bg-amber-500 text-slate-950 shadow-amber-500/20 font-extrabold'
+                    : 'bg-amber-500/10 border border-amber-500/20 text-amber-300 hover:bg-amber-500/20 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Building className="w-4 h-4 stroke-[2.5]" />
+                  <span>Cartera de Clientes (SaaS)</span>
+                </div>
+                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${
+                  activeSection === 'comercios' ? 'bg-slate-950 text-amber-300' : 'bg-amber-400/20 text-amber-300'
+                }`}>
+                  {merchantClients.length}
+                </span>
+              </button>
+            </div>
+          )}
 
           {/* SECTION 1: TARJETAS DE FIDELIZACIÓN */}
           <div className="mb-4">
@@ -1212,7 +1511,11 @@ Contacto y Soporte: soporte@markethers.com
 
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-black text-slate-900 tracking-tight">
-                {isOwner ? 'Dashboard Ejecutivo Dueño' : 'Panel de Control'}
+                {activeSection === 'comercios'
+                  ? 'Cartera de Clientes SaaS'
+                  : isOwner
+                  ? 'Dashboard Ejecutivo Dueño'
+                  : 'Panel de Control'}
               </h1>
               <span className="text-xs text-slate-400 font-medium">
                 / {todayFormatted}
@@ -1276,6 +1579,45 @@ Contacto y Soporte: soporte@markethers.com
             </button>
           </div>
         </header>
+
+        {/* TOP STICKY TECHNICAL SUPPORT IMPERSONATION BANNER */}
+        {impersonatedMerchant && (
+          <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-orange-500 text-slate-950 px-4 sm:px-8 py-3 shadow-md flex flex-wrap items-center justify-between gap-3 sticky top-0 z-40 border-b border-amber-600">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-black/20 flex items-center justify-center font-bold text-lg shadow-inner">
+                🛠️
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-black tracking-wide uppercase text-slate-950">
+                    Modo Soporte Técnico Activo
+                  </p>
+                  <span className="bg-black/20 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-extrabold uppercase">
+                    Acceso Manager
+                  </span>
+                </div>
+                <p className="text-xs font-medium text-slate-900 mt-0.5">
+                  Estás gestionando la cuenta de: <strong className="font-extrabold text-black">{impersonatedMerchant.businessName}</strong> ({impersonatedMerchant.ownerName} &bull; {impersonatedMerchant.email} &bull; {impersonatedMerchant.phone})
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setActiveSection('comercios')}
+                className="px-3.5 py-1.5 bg-black/20 hover:bg-black/30 text-slate-950 text-xs font-bold rounded-xl transition-all"
+              >
+                Ver Cartera SaaS
+              </button>
+              <button
+                onClick={handleExitImpersonation}
+                className="px-4 py-1.5 bg-slate-950 hover:bg-slate-900 text-white text-xs font-black rounded-xl shadow-lg transition-all flex items-center gap-1.5"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Salir de Soporte Técnico</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Dynamic Main Body Content */}
         <main className="p-4 sm:p-8 space-y-6 max-w-7xl mx-auto w-full flex-1">
@@ -1445,6 +1787,16 @@ Contacto y Soporte: soporte@markethers.com
                   >
                     <Receipt className="w-4 h-4 stroke-[2.5]" />
                     <span>Registrar Venta / Cobro</span>
+                  </button>
+
+                  {/* Action: Cartera de Clientes SaaS */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection('comercios')}
+                    className="flex-1 sm:flex-none px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm cursor-pointer transition-all"
+                  >
+                    <Building className="w-3.5 h-3.5" />
+                    <span>Cartera SaaS ({merchantClients.length})</span>
                   </button>
 
                   {/* Action: Nuevo Cliente */}
@@ -3790,6 +4142,455 @@ Contacto y Soporte: soporte@markethers.com
               </div>
             </div>
           )}
+
+          {/* ========================================================= */}
+          {/* VIEW: CARTERA DE CLIENTES SAAS (CONSOLA DUEÑO / MANAGER)  */}
+          {/* ========================================================= */}
+          {activeSection === 'comercios' && (
+            <div className="space-y-6">
+              {/* TOP HEADER BAR */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
+                      <Building className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
+                        <span>Cartera de Clientes & Suscripciones SaaS</span>
+                        <span className="text-[10px] bg-amber-100 text-amber-900 font-extrabold px-2 py-0.5 rounded-full uppercase">
+                          Consola Dueño
+                        </span>
+                      </h2>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Control general de comercios activos, pruebas, cuentas morosas (lo que deben), ingresos cobrados (lo que pagaron) y accesos directos de soporte técnico.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                  <button
+                    onClick={handleExportMerchantsCSV}
+                    className="flex-1 sm:flex-none px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all"
+                    title="Exportar cartera completa a Excel / CSV"
+                  >
+                    <Download className="w-3.5 h-3.5 text-slate-600" />
+                    <span>Exportar CSV</span>
+                  </button>
+
+                  <button
+                    onClick={() => setIsNewMerchantModalOpen(true)}
+                    className="flex-1 sm:flex-none px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md shadow-slate-900/10 transition-all hover:scale-[1.02]"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-amber-400 stroke-[3]" />
+                    <span>+ Registrar Comercio</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 4 FINANCIAL & OPERATIONAL KPIS */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* KPI 1: TOTAL COMERCIOS */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-sm">
+                  <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+                    <span className="font-bold uppercase tracking-wider text-[11px]">Total Comercios</span>
+                    <Store className="w-4 h-4 text-slate-400" />
+                  </div>
+                  <div className="text-2xl font-black text-slate-900 mt-1">
+                    {merchantClients.length}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1 text-[10px] font-bold">
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      {merchantClients.filter(m => m.status === 'active').length} Activos
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                      {merchantClients.filter(m => m.status === 'trialing').length} En Prueba
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                      {merchantClients.filter(m => m.status === 'past_due').length} Mora
+                    </span>
+                  </div>
+                </div>
+
+                {/* KPI 2: MRR RECURRENTE (LO QUE PAGAN) */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-sm">
+                  <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+                    <span className="font-bold uppercase tracking-wider text-[11px]">MRR Recurrente (Lo que pagan)</span>
+                    <Repeat className="w-4 h-4 text-emerald-500" />
+                  </div>
+                  <div className="text-2xl font-black text-slate-900 mt-1">
+                    ${merchantClients.filter(m => m.status === 'active' || m.status === 'trialing').reduce((acc, m) => acc + (m.monthlyPrice || 0), 0)}.00{' '}
+                    <span className="text-xs text-slate-400 font-semibold">USD/mes</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-2">
+                    Facturación estimada por suscripciones activas
+                  </p>
+                </div>
+
+                {/* KPI 3: HISTÓRICO RECAUDADO (LO QUE PAGARON) */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-sm">
+                  <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+                    <span className="font-bold uppercase tracking-wider text-[11px]">Total Cobrado (Lo que pagaron)</span>
+                    <CircleDollarSign className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <div className="text-2xl font-black text-emerald-600 mt-1">
+                    ${merchantClients.reduce((acc, m) => acc + (m.totalPaid || 0), 0)}.00{' '}
+                    <span className="text-xs text-slate-400 font-semibold">USD</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-2">
+                    Ingresos históricos acumulados cobrados
+                  </p>
+                </div>
+
+                {/* KPI 4: CARTERA VENCIDA (LO QUE DEBEN) */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-sm">
+                  <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+                    <span className="font-bold uppercase tracking-wider text-[11px]">Cartera Vencida (Lo que deben)</span>
+                    <AlertTriangle className={`w-4 h-4 ${merchantClients.reduce((acc, m) => acc + (m.amountDue || 0), 0) > 0 ? 'text-rose-500' : 'text-slate-400'}`} />
+                  </div>
+                  <div className={`text-2xl font-black mt-1 ${
+                    merchantClients.reduce((acc, m) => acc + (m.amountDue || 0), 0) > 0 ? 'text-rose-600' : 'text-slate-900'
+                  }`}>
+                    ${merchantClients.reduce((acc, m) => acc + (m.amountDue || 0), 0)}.00{' '}
+                    <span className="text-xs text-slate-400 font-semibold">USD</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-2">
+                    {merchantClients.filter(m => m.amountDue > 0).length > 0 ? (
+                      <span className="text-rose-600 font-bold">
+                        ⚠️ {merchantClients.filter(m => m.amountDue > 0).length} cuenta(s) con saldo pendiente
+                      </span>
+                    ) : (
+                      <span className="text-emerald-600 font-semibold">
+                        ✅ Todos los comercios al corriente
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {/* SEARCH & FILTER TABS */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+                {/* Status Tabs */}
+                <div className="flex flex-wrap items-center bg-slate-100 p-1 rounded-xl text-xs font-bold text-slate-600">
+                  <button
+                    onClick={() => setMerchantFilterStatus('all')}
+                    className={`px-3 py-1.5 rounded-lg transition-all ${
+                      merchantFilterStatus === 'all'
+                        ? 'bg-white text-slate-900 shadow-sm font-black'
+                        : 'hover:text-slate-900'
+                    }`}
+                  >
+                    Todos ({merchantClients.length})
+                  </button>
+                  <button
+                    onClick={() => setMerchantFilterStatus('active')}
+                    className={`px-3 py-1.5 rounded-lg transition-all ${
+                      merchantFilterStatus === 'active'
+                        ? 'bg-white text-slate-900 shadow-sm font-black'
+                        : 'hover:text-slate-900'
+                    }`}
+                  >
+                    Activos ({merchantClients.filter(m => m.status === 'active').length})
+                  </button>
+                  <button
+                    onClick={() => setMerchantFilterStatus('trialing')}
+                    className={`px-3 py-1.5 rounded-lg transition-all ${
+                      merchantFilterStatus === 'trialing'
+                        ? 'bg-white text-slate-900 shadow-sm font-black'
+                        : 'hover:text-slate-900'
+                    }`}
+                  >
+                    En Prueba ({merchantClients.filter(m => m.status === 'trialing').length})
+                  </button>
+                  <button
+                    onClick={() => setMerchantFilterStatus('past_due')}
+                    className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                      merchantFilterStatus === 'past_due'
+                        ? 'bg-rose-500 text-white shadow-sm font-black'
+                        : 'text-rose-700 hover:text-rose-900'
+                    }`}
+                  >
+                    <span>Con Deuda / Mora</span>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                      merchantFilterStatus === 'past_due' ? 'bg-rose-700 text-white' : 'bg-rose-100 text-rose-800'
+                    }`}>
+                      {merchantClients.filter(m => m.status === 'past_due').length}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setMerchantFilterStatus('cancelled')}
+                    className={`px-3 py-1.5 rounded-lg transition-all ${
+                      merchantFilterStatus === 'cancelled'
+                        ? 'bg-white text-slate-900 shadow-sm font-black'
+                        : 'hover:text-slate-900'
+                    }`}
+                  >
+                    Cancelados ({merchantClients.filter(m => m.status === 'cancelled').length})
+                  </button>
+                </div>
+
+                {/* Search input */}
+                <div className="relative min-w-[280px]">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Buscar negocio, dueño, correo o ciudad..."
+                    value={merchantSearchQuery}
+                    onChange={e => setMerchantSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 outline-none focus:ring-2 focus:ring-amber-500/20"
+                  />
+                  {merchantSearchQuery && (
+                    <button
+                      onClick={() => setMerchantSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* MERCHANT CLIENTS LIST TABLE */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase tracking-wider text-[11px] font-bold">
+                        <th className="py-3.5 px-4">Comercio & Propietario</th>
+                        <th className="py-3.5 px-4">Estado de Cuenta</th>
+                        <th className="py-3.5 px-4">Lo Que Pagan</th>
+                        <th className="py-3.5 px-4">Lo Que Pagaron</th>
+                        <th className="py-3.5 px-4">Lo Que Deben</th>
+                        <th className="py-3.5 px-4 text-right">Acceso Técnico & Gestión</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                      {merchantClients
+                        .filter(m => {
+                          const matchesStatus = merchantFilterStatus === 'all' || m.status === merchantFilterStatus;
+                          const q = merchantSearchQuery.toLowerCase().trim();
+                          const matchesQuery = !q || (
+                            m.businessName.toLowerCase().includes(q) ||
+                            m.ownerName.toLowerCase().includes(q) ||
+                            m.email.toLowerCase().includes(q) ||
+                            m.phone.toLowerCase().includes(q) ||
+                            m.city.toLowerCase().includes(q)
+                          );
+                          return matchesStatus && matchesQuery;
+                        })
+                        .map(client => {
+                          const isCurrentActiveBiz = selectedBusinessId === client.businessId;
+                          return (
+                            <tr
+                              key={client.id}
+                              className={`hover:bg-amber-50/40 transition-colors ${
+                                isCurrentActiveBiz ? 'bg-amber-50/30' : ''
+                              }`}
+                            >
+                              {/* 1. COMERCIO & PROPIETARIO */}
+                              <td className="py-4 px-4">
+                                <div className="flex items-start gap-3">
+                                  <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-base shrink-0 shadow-sm">
+                                    🏢
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="font-extrabold text-sm text-slate-900">
+                                        {client.businessName}
+                                      </h4>
+                                      {isCurrentActiveBiz && (
+                                        <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 text-[9px] font-black uppercase">
+                                          En sesión
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-slate-600 font-medium mt-0.5">
+                                      {client.ownerName} &bull; <span className="text-slate-400">{client.category}</span>
+                                    </p>
+                                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400 mt-1">
+                                      <span className="font-mono text-slate-500">{client.email}</span>
+                                      <span>&bull;</span>
+                                      <span>{client.phone}</span>
+                                      <span>&bull;</span>
+                                      <span>{client.city}</span>
+                                    </div>
+                                    {client.notes && (
+                                      <p className="text-[11px] text-amber-800 bg-amber-50/80 px-2 py-0.5 rounded mt-1.5 inline-block border border-amber-200/50">
+                                        📝 {client.notes}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* 2. ESTADO DE CUENTA */}
+                              <td className="py-4 px-4">
+                                <div>
+                                  {client.status === 'active' && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                      <span>Activo</span>
+                                    </span>
+                                  )}
+                                  {client.status === 'trialing' && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-blue-100 text-blue-800 border border-blue-200">
+                                      <Clock className="w-3 h-3 text-blue-600" />
+                                      <span>Prueba 14d</span>
+                                    </span>
+                                  )}
+                                  {client.status === 'past_due' && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-rose-100 text-rose-800 border border-rose-300 animate-pulse">
+                                      <AlertTriangle className="w-3 h-3 text-rose-600" />
+                                      <span>En Mora / Debe</span>
+                                    </span>
+                                  )}
+                                  {client.status === 'cancelled' && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                      <X className="w-3 h-3 text-slate-500" />
+                                      <span>Cancelado</span>
+                                    </span>
+                                  )}
+                                  <div className="text-[10px] text-slate-400 mt-1">
+                                    Registrado: {new Date(client.createdAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* 3. LO QUE PAGAN */}
+                              <td className="py-4 px-4">
+                                <div>
+                                  <div className="font-black text-sm text-slate-900">
+                                    ${client.monthlyPrice}.00 USD <span className="text-[10px] text-slate-400 font-normal">/mes</span>
+                                  </div>
+                                  <div className="text-[11px] font-semibold text-slate-600 mt-0.5">
+                                    {client.planName}
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 mt-0.5">
+                                    {client.billingCycle === 'annual' ? 'Ciclo Anual (-35%)' : 'Ciclo Mensual'}
+                                  </div>
+                                  <div className="text-[10px] text-slate-500 font-mono mt-1">
+                                    Próx: {client.nextBillingDate}
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* 4. LO QUE PAGARON */}
+                              <td className="py-4 px-4">
+                                <div>
+                                  <div className="font-extrabold text-sm text-emerald-700">
+                                    ${client.totalPaid}.00 USD
+                                  </div>
+                                  <div className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5">
+                                    <CreditCard className="w-3 h-3 text-slate-400" />
+                                    <span>•••• {client.cardLast4 || '4242'} ({client.cardBrand || 'Visa'})</span>
+                                  </div>
+                                  <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded font-mono mt-1 inline-block">
+                                    Pasarela Stripe OK
+                                  </span>
+                                </div>
+                              </td>
+
+                              {/* 5. LO QUE DEBEN */}
+                              <td className="py-4 px-4">
+                                <div>
+                                  {client.amountDue > 0 ? (
+                                    <div>
+                                      <div className="font-black text-base text-rose-600">
+                                        ${client.amountDue}.00 USD
+                                      </div>
+                                      <span className="inline-block mt-0.5 px-2 py-0.5 rounded bg-rose-50 text-rose-700 text-[10px] font-black uppercase border border-rose-200">
+                                        Saldo Pendiente
+                                      </span>
+                                      <button
+                                        onClick={() => handleQuickMarkPaid(client)}
+                                        className="mt-1 text-[10px] font-bold text-emerald-700 hover:text-emerald-900 underline block"
+                                        title="Registrar que el cliente ya liquidó este monto"
+                                      >
+                                        ✓ Marcar Pagado ($0)
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      <div className="font-extrabold text-xs text-emerald-600 flex items-center gap-1">
+                                        <Check className="w-3.5 h-3.5" />
+                                        <span>Al corriente ($0.00)</span>
+                                      </div>
+                                      <span className="text-[10px] text-slate-400 block mt-0.5">
+                                        Sin adeudos pendientes
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+
+                              {/* 6. ACCIONES (ACCESO TÉCNICO, AJUSTAR, WHATSAPP) */}
+                              <td className="py-4 px-4 text-right">
+                                <div className="flex flex-col sm:flex-row items-end sm:items-center justify-end gap-2">
+                                  {/* Botón Principal: Acceso Técnico / Impersonate */}
+                                  <button
+                                    onClick={() => handleImpersonate(client)}
+                                    className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs rounded-xl shadow-sm transition-all hover:scale-[1.02] flex items-center gap-1.5"
+                                    title="Iniciar sesión en la cuenta del cliente por soporte técnico"
+                                  >
+                                    <KeyRound className="w-3.5 h-3.5" />
+                                    <span>Acceso Técnico</span>
+                                  </button>
+
+                                  {/* Botón Ajustar Deuda / Cuenta */}
+                                  <button
+                                    onClick={() => setEditingMerchantBilling(client)}
+                                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors flex items-center gap-1"
+                                    title="Editar deuda, pagos y estado del comercio"
+                                  >
+                                    <Wrench className="w-3 h-3 text-slate-500" />
+                                    <span>Ajustar</span>
+                                  </button>
+
+                                  {/* Botón WhatsApp Directo */}
+                                  <a
+                                    href={`https://wa.me/${client.phone.replace(/\D/g, '')}?text=${encodeURIComponent(
+                                      client.amountDue > 0
+                                        ? `Hola ${client.ownerName}, te saludamos de Markethers respecto a tu cuenta en ${client.businessName} para coordinar tu saldo pendiente de $${client.amountDue} USD. ¿En qué podemos apoyarte?`
+                                        : `Hola ${client.ownerName}, te saludamos del equipo de Markethers. ¿Cómo podemos apoyarte hoy con tu menú o tarjetas de lealtad en ${client.businessName}?`
+                                    )}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl transition-colors"
+                                    title="Contactar al dueño por WhatsApp"
+                                  >
+                                    <MessageCircle className="w-4 h-4" />
+                                  </a>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+
+                  {merchantClients.filter(m => {
+                    const matchesStatus = merchantFilterStatus === 'all' || m.status === merchantFilterStatus;
+                    const q = merchantSearchQuery.toLowerCase().trim();
+                    const matchesQuery = !q || (
+                      m.businessName.toLowerCase().includes(q) ||
+                      m.ownerName.toLowerCase().includes(q) ||
+                      m.email.toLowerCase().includes(q) ||
+                      m.phone.toLowerCase().includes(q) ||
+                      m.city.toLowerCase().includes(q)
+                    );
+                    return matchesStatus && matchesQuery;
+                  }).length === 0 && (
+                    <div className="py-12 text-center text-slate-400">
+                      <Store className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+                      <p className="text-sm font-bold text-slate-700">No se encontraron comercios</p>
+                      <p className="text-xs text-slate-400 mt-1">Prueba cambiando los filtros de búsqueda o registra un nuevo comercio.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </main>
       </div>
 
@@ -4655,6 +5456,403 @@ Contacto y Soporte: soporte@markethers.com
                 <span>Registrar Venta a Cliente</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Ajustar Cuenta & Facturación de Comercio (SaaS Manager) */}
+      {editingMerchantBilling && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 text-slate-900 shadow-2xl relative">
+            <button
+              onClick={() => setEditingMerchantBilling(null)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 rounded-full"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-700 flex items-center justify-center font-bold">
+                <Wrench className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-black text-lg">Ajustar Cuenta & Facturación</h3>
+                <span className="text-xs text-slate-500 block font-medium">
+                  {editingMerchantBilling.businessName} &bull; {editingMerchantBilling.ownerName}
+                </span>
+              </div>
+            </div>
+
+            <form onSubmit={handleUpdateMerchantBilling} className="space-y-4 mt-5">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Estado de Cuenta
+                  </label>
+                  <select
+                    value={editingMerchantBilling.status}
+                    onChange={e =>
+                      setEditingMerchantBilling({
+                        ...editingMerchantBilling,
+                        status: e.target.value as any,
+                      })
+                    }
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none"
+                  >
+                    <option value="active">🟢 Activo</option>
+                    <option value="trialing">🔵 En Prueba 14d</option>
+                    <option value="past_due">🔴 En Mora / Con Deuda</option>
+                    <option value="cancelled">⚪ Cancelado</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Plan Afiliado
+                  </label>
+                  <select
+                    value={editingMerchantBilling.planId}
+                    onChange={e => {
+                      const pid = e.target.value as any;
+                      const pnames = { starter: 'Plan Despegue', pro: 'Plan Pro Markethers', franchise: 'Plan Multi-Sucursal', enterprise: 'Enterprise' };
+                      setEditingMerchantBilling({
+                        ...editingMerchantBilling,
+                        planId: pid,
+                        planName: (pnames as any)[pid] || editingMerchantBilling.planName,
+                      });
+                    }}
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none"
+                  >
+                    <option value="starter">Plan Despegue ($29/m)</option>
+                    <option value="pro">Plan Pro Markethers ($49/m)</option>
+                    <option value="franchise">Plan Multi-Sucursal ($99/m)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Lo Que Deben (Saldo Pendiente USD)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={editingMerchantBilling.amountDue}
+                    onChange={e =>
+                      setEditingMerchantBilling({
+                        ...editingMerchantBilling,
+                        amountDue: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold font-mono text-rose-600 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Lo Que Pagaron (Total Histórico USD)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={editingMerchantBilling.totalPaid}
+                    onChange={e =>
+                      setEditingMerchantBilling({
+                        ...editingMerchantBilling,
+                        totalPaid: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold font-mono text-emerald-600 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Cuota Recurrente ($ USD/mes)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingMerchantBilling.monthlyPrice}
+                    onChange={e =>
+                      setEditingMerchantBilling({
+                        ...editingMerchantBilling,
+                        monthlyPrice: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold font-mono text-slate-900 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Próxima Fecha de Cobro
+                  </label>
+                  <input
+                    type="text"
+                    value={editingMerchantBilling.nextBillingDate}
+                    onChange={e =>
+                      setEditingMerchantBilling({
+                        ...editingMerchantBilling,
+                        nextBillingDate: e.target.value,
+                      })
+                    }
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Notas de Soporte / Observaciones Internas
+                </label>
+                <textarea
+                  rows={2}
+                  value={editingMerchantBilling.notes || ''}
+                  onChange={e =>
+                    setEditingMerchantBilling({
+                      ...editingMerchantBilling,
+                      notes: e.target.value,
+                    })
+                  }
+                  placeholder="ej. Acordó pago diferido el próximo viernes vía transferencia..."
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none resize-none"
+                />
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingMerchantBilling(null)}
+                  className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl shadow-md flex items-center justify-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>Guardar Cambios de Cuenta</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Registrar Nuevo Comercio Manualmente (SaaS Manager) */}
+      {isNewMerchantModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 text-slate-900 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setIsNewMerchantModalOpen(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 rounded-full"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold">
+                <Building className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <h3 className="font-black text-lg">Registrar Nuevo Comercio</h3>
+                <span className="text-xs text-slate-500 block">
+                  Añade un nuevo cliente a tu cartera de comercios con cuenta aprovisionada.
+                </span>
+              </div>
+            </div>
+
+            <form onSubmit={handleCreateNewMerchant} className="space-y-3.5 mt-4">
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Nombre Comercial del Negocio *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="ej. Tacos El Pastor Dorado"
+                  value={newMerchantBusinessName}
+                  onChange={e => setNewMerchantBusinessName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Nombre del Propietario *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="ej. Carlos Mendoza"
+                    value={newMerchantOwnerName}
+                    onChange={e => setNewMerchantOwnerName(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Giro / Categoría
+                  </label>
+                  <select
+                    value={newMerchantCategory}
+                    onChange={e => setNewMerchantCategory(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none"
+                  >
+                    <option value="Restaurante & Comida">Restaurante</option>
+                    <option value="Bar & Cantina">Bar & Cantina</option>
+                    <option value="Cafetería & Brunch">Cafetería & Brunch</option>
+                    <option value="Paletería & Heladería">Paletería & Heladería</option>
+                    <option value="Pizzería Artesanal">Pizzería Artesanal</option>
+                    <option value="Barbería & Spa">Barbería & Spa</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Email de Contacto *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="carlos@negocio.com"
+                    value={newMerchantEmail}
+                    onChange={e => setNewMerchantEmail(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Teléfono / WhatsApp *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="+52 55 1234 5678"
+                    value={newMerchantPhone}
+                    onChange={e => setNewMerchantPhone(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Ciudad & Ubicación
+                </label>
+                <input
+                  type="text"
+                  placeholder="ej. Ciudad de México / Guadalajara"
+                  value={newMerchantCity}
+                  onChange={e => setNewMerchantCity(e.target.value)}
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Plan Suscripción
+                  </label>
+                  <select
+                    value={newMerchantPlan}
+                    onChange={e => setNewMerchantPlan(e.target.value as any)}
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none"
+                  >
+                    <option value="starter">Plan Despegue ($29/m)</option>
+                    <option value="pro">Plan Pro Markethers ($49/m)</option>
+                    <option value="franchise">Plan Multi-Sucursal ($99/m)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Estado Inicial
+                  </label>
+                  <select
+                    value={newMerchantStatus}
+                    onChange={e => setNewMerchantStatus(e.target.value as any)}
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none"
+                  >
+                    <option value="trialing">Prueba 14 Días</option>
+                    <option value="active">Activo (Al día)</option>
+                    <option value="past_due">En Mora / Pendiente</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Lo Que Deben (USD)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={newMerchantAmountDue}
+                    onChange={e => setNewMerchantAmountDue(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Lo Que Pagaron (USD)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={newMerchantTotalPaid}
+                    onChange={e => setNewMerchantTotalPaid(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Notas Internas
+                </label>
+                <input
+                  type="text"
+                  placeholder="ej. Alta directa vía llamada de ventas..."
+                  value={newMerchantNotes}
+                  onChange={e => setNewMerchantNotes(e.target.value)}
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none"
+                />
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsNewMerchantModalOpen(false)}
+                  className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl shadow-md flex items-center justify-center gap-2"
+                >
+                  <Plus className="w-4 h-4 text-amber-400 stroke-[3]" />
+                  <span>Aprovisionar y Dar de Alta</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

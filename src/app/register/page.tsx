@@ -21,7 +21,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { store } from '@/lib/store';
-import { Business, Customer, MenuItem, StampTransaction } from '@/types';
+import { Business, Customer, MenuItem, StampTransaction, MerchantClientAccount } from '@/types';
 import { validateCreditCard, saveUser } from '@/lib/auth';
 
 function RegisterForm() {
@@ -412,6 +412,33 @@ function RegisterForm() {
             gateway: paymentMethod,
           })
         );
+
+        // Register in Master Merchant Portfolio for Owner / Manager Console
+        const newMerchantClient: MerchantClientAccount = {
+          id: `merch_${Date.now()}`,
+          businessId: newBiz.id,
+          businessName: newBiz.name,
+          ownerName: ownerName || 'Propietario',
+          email: email.trim().toLowerCase(),
+          phone: whatsapp || '+52 55 1234 5678',
+          city: city || 'Ciudad',
+          category: businessCategory || 'Restaurante',
+          status: 'trialing',
+          planId: selectedPlan,
+          planName: planPricing.name,
+          billingCycle,
+          monthlyPrice: currentPrice,
+          totalPaid: 0,
+          amountDue: 0,
+          nextBillingDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + ' (14d prueba)',
+          createdAt: new Date().toISOString(),
+          lastLoginAt: new Date().toISOString(),
+          cardLast4: cardValidation.last4,
+          cardBrand: cardValidation.brand,
+          notes: 'Registro autónomo vía web con tarjeta de crédito verificada.',
+        };
+        const existingMerchantClients = JSON.parse(localStorage.getItem('markethers_merchant_clients_db') || '[]');
+        localStorage.setItem('markethers_merchant_clients_db', JSON.stringify([newMerchantClient, ...existingMerchantClients]));
       }
 
       setLoading(false);

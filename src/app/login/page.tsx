@@ -126,18 +126,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Quick Demo Fill Pill for Owner */}
-          <div className="p-3 bg-zinc-950 border border-zinc-800/80 rounded-2xl flex items-center justify-between text-[11px]">
-            <span className="text-zinc-400">👑 ¿Acceso del Propietario / Dueño?</span>
-            <button
-              type="button"
-              onClick={handleUseDemoAccount}
-              className="text-emerald-400 font-bold hover:underline"
-            >
-              Cargar datos de Dueño
-            </button>
-          </div>
-
           <div className="pt-4 border-t border-zinc-800 text-center text-xs text-zinc-400">
             ¿Aún no tienes cuenta para tu negocio?{' '}
             <Link href="/register" className="text-emerald-400 font-bold hover:underline">

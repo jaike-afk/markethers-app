@@ -111,3 +111,27 @@ export interface CartItem {
   quantity: number;
   notes?: string;
 }
+
+export interface MerchantClientAccount {
+  id: string;
+  businessId: string;
+  businessName: string;
+  ownerName: string;
+  email: string;
+  phone: string;
+  city: string;
+  category: string;
+  status: 'active' | 'trialing' | 'past_due' | 'cancelled';
+  planId: 'starter' | 'pro' | 'franchise' | 'enterprise';
+  planName: string;
+  billingCycle: 'monthly' | 'annual';
+  monthlyPrice: number;
+  totalPaid: number;
+  amountDue: number; // Lo que deben
+  nextBillingDate: string;
+  createdAt: string;
+  lastLoginAt?: string;
+  cardLast4?: string;
+  cardBrand?: string;
+  notes?: string;
+}
