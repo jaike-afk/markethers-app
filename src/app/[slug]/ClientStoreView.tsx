@@ -1,0 +1,508 @@
+'use client';
+
+import React, { useState } from 'react';
+import { Business, Customer, MenuItem, CartItem } from '@/types';
+import { AppleWalletCard } from '@/components/AppleWalletCard';
+import { CounterQrModal } from '@/components/CounterQrModal';
+import {
+  CreditCard,
+  Utensils,
+  MapPin,
+  Clock,
+  Phone,
+  Camera,
+  ShoppingBag,
+  Sparkles,
+  QrCode,
+  Plus,
+  Minus,
+  MessageCircle,
+  Share2,
+  Check,
+} from 'lucide-react';
+
+interface ClientStoreViewProps {
+  business: Business;
+  initialCustomer?: Customer | null;
+  menuItems: MenuItem[];
+}
+
+export function ClientStoreView({
+  business,
+  initialCustomer,
+  menuItems,
+}: ClientStoreViewProps) {
+  const [activeTab, setActiveTab] = useState<'card' | 'menu' | 'info'>('card');
+  const [currentCustomer, setCurrentCustomer] = useState<Customer | null>(
+    initialCustomer || null
+  );
+
+  // Registration Form State
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [regError, setRegError] = useState('');
+
+  // Cart State for Menu
+  const [cart, setCart] = useState<Record<string, number>>({});
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+
+  // Categories list
+  const categories = ['all', ...Array.from(new Set(menuItems.map(m => m.category)))];
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !phone.trim()) {
+      setRegError('Por favor completa tu nombre y número de teléfono');
+      return;
+    }
+    setIsRegistering(true);
+    setRegError('');
+
+    try {
+      const res = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessId: business.id,
+          name: name.trim(),
+          phone: phone.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.customer) {
+        setCurrentCustomer(data.customer);
+      } else {
+        setRegError(data.error || 'Error al activar tu tarjeta');
+      }
+    } catch (err) {
+      console.error(err);
+      setRegError('Error de conexión');
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
+  // Cart helpers
+  const addToCart = (itemId: string) => {
+    setCart(prev => ({ ...prev, [itemId]: (prev[itemId] || 0) + 1 }));
+  };
+
+  const removeFromCart = (itemId: string) => {
+    setCart(prev => {
+      const current = prev[itemId] || 0;
+      if (current <= 1) {
+        const copy = { ...prev };
+        delete copy[itemId];
+        return copy;
+      }
+      return { ...prev, [itemId]: current - 1 };
+    });
+  };
+
+  const totalCartCount = Object.values(cart).reduce((a, b) => a + b, 0);
+  const totalCartAmount = Object.entries(cart).reduce((sum, [itemId, qty]) => {
+    const item = menuItems.find(m => m.id === itemId);
+    return sum + (item ? item.price * qty : 0);
+  }, 0);
+
+  const sendWhatsAppOrder = () => {
+    const itemsList = Object.entries(cart)
+      .map(([itemId, qty]) => {
+        const item = menuItems.find(m => m.id === itemId);
+        return item ? `• ${qty}x ${item.name} ($${item.price * qty})` : '';
+      })
+      .filter(Boolean)
+      .join('\n');
+
+    const customerGreeting = currentCustomer
+      ? `Mi nombre es ${currentCustomer.name} (Cliente lealtad)`
+      : 'Nuevo pedido';
+
+    const message = `¡Hola ${business.name}! 👋\nQuiero hacer el siguiente pedido:\n\n${itemsList}\n\n*Total: ${business.currency}${totalCartAmount}*\n\n${customerGreeting}`;
+    const encoded = encodeURIComponent(message);
+    window.open(`https://wa.me/${business.whatsapp}?text=${encoded}`, '_blank');
+  };
+
+  const filteredItems =
+    selectedCategory === 'all'
+      ? menuItems
+      : menuItems.filter(m => m.category === selectedCategory);
+
+  return (
+    <div className="min-h-screen bg-zinc-950 text-white pb-24">
+      {/* Hero Cover Banner */}
+      <div className="relative h-44 sm:h-56 w-full overflow-hidden">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={business.coverUrl}
+          alt={business.name}
+          className="w-full h-full object-cover brightness-50"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
+
+        <div className="absolute top-4 right-4 flex gap-2">
+          <button
+            onClick={() => setIsQrModalOpen(true)}
+            className="p-2.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-amber-400 border border-white/10 transition-transform active:scale-95"
+            title="Ver stand de mostrador para imprimir"
+          >
+            <QrCode className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Business Profile Info Header */}
+      <div className="max-w-md mx-auto px-4 -mt-14 relative z-10 text-center">
+        <div className="w-20 h-20 mx-auto rounded-3xl bg-zinc-900 border-2 border-zinc-700 shadow-2xl flex items-center justify-center text-4xl mb-3">
+          {business.logoUrl}
+        </div>
+        <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+          {business.name}
+        </h1>
+        <p className="text-xs text-amber-400 font-medium mt-0.5">{business.tagline}</p>
+        <p className="text-xs text-zinc-400 mt-1 max-w-sm mx-auto leading-relaxed">
+          {business.description}
+        </p>
+
+        {/* Quick Contact Icons */}
+        <div className="flex items-center justify-center gap-3 mt-3">
+          {business.whatsapp && (
+            <a
+              href={`https://wa.me/${business.whatsapp}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors flex items-center gap-1.5 text-xs font-semibold"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span>WhatsApp</span>
+            </a>
+          )}
+          {business.instagram && (
+            <a
+              href={`https://instagram.com/${business.instagram}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-xl bg-pink-500/10 text-pink-400 border border-pink-500/20 hover:bg-pink-500/20 transition-colors flex items-center gap-1.5 text-xs font-semibold"
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span>@{business.instagram}</span>
+            </a>
+          )}
+        </div>
+
+        {/* Navigation Tabs (InfoLink Style) */}
+        <div className="flex p-1 bg-zinc-900/90 rounded-2xl border border-zinc-800 mt-5 shadow-lg">
+          <button
+            onClick={() => setActiveTab('card')}
+            className={`flex-1 py-2 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+              activeTab === 'card'
+                ? 'bg-amber-500 text-zinc-950 shadow-md'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <CreditCard className="w-3.5 h-3.5" />
+            <span>Tarjeta Wallet</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('menu')}
+            className={`flex-1 py-2 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+              activeTab === 'menu'
+                ? 'bg-amber-500 text-zinc-950 shadow-md'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <Utensils className="w-3.5 h-3.5" />
+            <span>Menú & Pedidos</span>
+            {totalCartCount > 0 && (
+              <span className="w-4 h-4 rounded-full bg-zinc-950 text-white text-[10px] flex items-center justify-center font-bold">
+                {totalCartCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('info')}
+            className={`flex-1 py-2 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+              activeTab === 'info'
+                ? 'bg-amber-500 text-zinc-950 shadow-md'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <MapPin className="w-3.5 h-3.5" />
+            <span>Info & Horarios</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <main className="max-w-md mx-auto px-4 mt-6">
+        {/* TAB 1: LOYALTY CARD */}
+        {activeTab === 'card' && (
+          <div>
+            {currentCustomer ? (
+              <div className="space-y-4">
+                <AppleWalletCard business={business} customer={currentCustomer} />
+                <div className="text-center pt-2">
+                  <button
+                    onClick={() => setCurrentCustomer(null)}
+                    className="text-[11px] text-zinc-500 hover:text-zinc-300 underline"
+                  >
+                    ¿No eres {currentCustomer.name}? Cambiar o activar otra tarjeta
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Registration Form for New Customer */
+              <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-2xl">
+                <div className="text-center mb-5">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center mx-auto mb-2 border border-amber-500/20">
+                    <Sparkles className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white">Activa tu Tarjeta Digital</h3>
+                  <p className="text-xs text-zinc-400 mt-1">
+                    Guárdala en tu Apple Wallet o Google Wallet y acumula sellos en cada visita.
+                  </p>
+
+                  <div className="mt-3 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 font-semibold flex items-center justify-center gap-1.5">
+                    <span>🎁 Regalo de bienvenida:</span>
+                    <strong className="text-white">+1 Sello de cortesía al activar</strong>
+                  </div>
+                </div>
+
+                <form onSubmit={handleRegister} className="space-y-3.5">
+                  <div>
+                    <label className="text-[11px] font-bold text-zinc-300 uppercase tracking-wider block mb-1">
+                      Nombre Completo
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Daniel Morales"
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      required
+                      className="w-full bg-zinc-950 border border-zinc-800 text-white placeholder-zinc-500 px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-zinc-300 uppercase tracking-wider block mb-1">
+                      WhatsApp / Celular
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="Ej: +52 55 1234 5678"
+                      value={phone}
+                      onChange={e => setPhone(e.target.value)}
+                      required
+                      className="w-full bg-zinc-950 border border-zinc-800 text-white placeholder-zinc-500 px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+
+                  {regError && (
+                    <div className="text-xs text-red-400 bg-red-950/40 p-2.5 rounded-xl border border-red-900/50">
+                      {regError}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isRegistering}
+                    className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-extrabold text-sm rounded-xl transition-all shadow-lg shadow-amber-500/20 active:scale-[0.99] flex items-center justify-center gap-2"
+                  >
+                    {isRegistering ? (
+                      <span>Generando tu Pase...</span>
+                    ) : (
+                      <>
+                        <CreditCard className="w-4 h-4" />
+                        <span>Obtener mi Tarjeta Gratis</span>
+                      </>
+                    )}
+                  </button>
+
+                  <p className="text-[10px] text-zinc-500 text-center mt-2">
+                    Sin descargas ni registros largos. 100% integrado a tu teléfono.
+                  </p>
+                </form>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 2: DIGITAL MENU & WHATSAPP ORDERS */}
+        {activeTab === 'menu' && (
+          <div className="space-y-4">
+            {/* Category pills */}
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+                    selectedCategory === cat
+                      ? 'bg-amber-500 text-zinc-950'
+                      : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
+                  }`}
+                >
+                  {cat === 'all' ? 'Todos' : cat}
+                </button>
+              ))}
+            </div>
+
+            {/* Menu Items List */}
+            <div className="space-y-3">
+              {filteredItems.map(item => {
+                const qty = cart[item.id] || 0;
+                return (
+                  <div
+                    key={item.id}
+                    className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3.5 flex gap-3.5 items-center justify-between hover:border-zinc-700 transition-colors"
+                  >
+                    {item.imageUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name}
+                        className="w-16 h-16 rounded-xl object-cover shrink-0"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="font-bold text-sm text-white truncate">{item.name}</h4>
+                        {item.featured && (
+                          <span className="text-[9px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-md border border-amber-500/30">
+                            Top
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-zinc-400 line-clamp-2 mt-0.5">
+                        {item.description}
+                      </p>
+                      <span className="text-sm font-extrabold text-amber-400 mt-1 block">
+                        {business.currency}
+                        {item.price}
+                      </span>
+                    </div>
+
+                    {/* Quantity controls */}
+                    <div className="flex items-center gap-1.5 bg-zinc-950 p-1 rounded-xl border border-zinc-800">
+                      {qty > 0 && (
+                        <>
+                          <button
+                            onClick={() => removeFromCart(item.id)}
+                            className="p-1.5 hover:bg-zinc-800 text-zinc-300 rounded-lg transition-colors"
+                          >
+                            <Minus className="w-3.5 h-3.5" />
+                          </button>
+                          <span className="text-xs font-bold px-1 text-white">{qty}</span>
+                        </>
+                      )}
+                      <button
+                        onClick={() => addToCart(item.id)}
+                        className="p-1.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 rounded-lg transition-colors font-bold"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Sticky WhatsApp Checkout Bar when items in cart */}
+            {totalCartCount > 0 && (
+              <div className="fixed bottom-4 left-4 right-4 max-w-md mx-auto z-40">
+                <div className="bg-zinc-900 border border-amber-500/50 rounded-2xl p-3.5 shadow-2xl flex items-center justify-between backdrop-blur-xl">
+                  <div>
+                    <span className="text-[10px] text-zinc-400 uppercase font-bold block">
+                      {totalCartCount} producto(s) en pedido
+                    </span>
+                    <span className="text-base font-black text-amber-400">
+                      Total: {business.currency}
+                      {totalCartAmount}
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={sendWhatsAppOrder}
+                    className="py-2.5 px-4 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span>Pedir por WhatsApp</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 3: BUSINESS INFO & HOURS */}
+        {activeTab === 'info' && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-xl space-y-5 text-xs">
+            <div>
+              <span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">
+                Ubicación & Dirección
+              </span>
+              <div className="flex items-start gap-2 text-zinc-200">
+                <MapPin className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <span>
+                  {business.address}, {business.city}
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">
+                Horario de Atención
+              </span>
+              <div className="space-y-1.5 text-zinc-300">
+                <div className="flex justify-between">
+                  <span>Lunes a Viernes</span>
+                  <span className="font-semibold text-white">08:00 AM – 09:00 PM</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Sábados y Domingos</span>
+                  <span className="font-semibold text-white">09:00 AM – 10:00 PM</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">
+                Canales de Atención
+              </span>
+              <div className="space-y-2">
+                <a
+                  href={`tel:${business.phone}`}
+                  className="flex items-center gap-2 p-2.5 bg-zinc-950 rounded-xl hover:bg-zinc-800 text-zinc-200 transition-colors"
+                >
+                  <Phone className="w-4 h-4 text-amber-400" />
+                  <span>{business.phone}</span>
+                </a>
+                <a
+                  href={`https://wa.me/${business.whatsapp}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 p-2.5 bg-zinc-950 rounded-xl hover:bg-zinc-800 text-emerald-400 transition-colors"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Chat Directo por WhatsApp</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* Printable Counter QR Modal */}
+      <CounterQrModal
+        business={business}
+        isOpen={isQrModalOpen}
+        onClose={() => setIsQrModalOpen(false)}
+      />
+    </div>
+  );
+}
