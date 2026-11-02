@@ -116,6 +116,49 @@ export default function HomePage() {
       {/* Background glow lighting effects */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-gradient-to-b from-emerald-500/15 via-teal-600/5 to-transparent blur-3xl pointer-events-none -z-10" />
 
+      {/* Top Navbar */}
+      <nav className="border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md sticky top-0 z-40">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-400 via-teal-400 to-lime-400 flex items-center justify-center text-zinc-950 font-black shadow-md shadow-emerald-500/20">
+              <Sparkles className="w-4 h-4 text-zinc-950 fill-zinc-950" />
+            </div>
+            <div>
+              <span className="font-extrabold text-base tracking-tight text-white block">
+                Markethers
+              </span>
+              <span className="text-[9px] text-zinc-400 -mt-1 block">
+                Plataforma de Lealtad & Menú Digital
+              </span>
+            </div>
+          </Link>
+
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link
+              href="/login"
+              className="px-3 py-1.5 text-xs font-bold text-zinc-300 hover:text-white transition-colors"
+            >
+              Iniciar Sesión
+            </Link>
+
+            <Link
+              href="/login"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-700/80 text-xs font-bold text-emerald-400 hover:bg-zinc-800 transition-all"
+            >
+              <Store className="w-3.5 h-3.5" />
+              <span>Acceso Dueño</span>
+            </Link>
+
+            <Link
+              href="/register"
+              className="hidden sm:inline-flex px-4 py-2 bg-[#22c55e] hover:bg-emerald-600 text-black font-extrabold text-xs rounded-xl shadow-md shadow-emerald-500/20 transition-all hover:scale-[1.02]"
+            >
+              Comenzar Gratis
+            </Link>
+          </div>
+        </div>
+      </nav>
+
       {/* ========================================================= */}
       {/* 1. HERO SECTION                                           */}
       {/* ========================================================= */}
