@@ -73,10 +73,53 @@ export default function ClubifyAppPortal() {
   // Stand modal
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
 
+  // Scanner state inside Panel
+  const [scannedCustomer, setScannedCustomer] = useState<Customer | null>(null);
+  const [scanMessage, setScanMessage] = useState<string | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
+
   const business = businesses.find(b => b.id === selectedBusinessId) || businesses[0];
   const customers = INITIAL_CUSTOMERS.filter(c => c.businessId === business.id);
   const menuItems = INITIAL_MENU_ITEMS.filter(m => m.businessId === business.id);
   const transactions = INITIAL_TRANSACTIONS.filter(t => t.businessId === business.id);
+
+  const handleScanCode = (token: string) => {
+    setScanError(null);
+    setScanMessage(null);
+    const found = customers.find(c => c.qrCodeToken === token);
+    if (found) {
+      setScannedCustomer(found);
+    } else {
+      setScanError(`Código no encontrado: ${token}`);
+    }
+  };
+
+  const handleAddStamp = (count: number = 1) => {
+    if (!scannedCustomer) return;
+    const target = business.loyaltyConfig.totalStamps;
+    const updatedStamps = scannedCustomer.currentStamps + count;
+    setScannedCustomer({
+      ...scannedCustomer,
+      currentStamps: updatedStamps,
+      totalVisits: scannedCustomer.totalVisits + 1,
+    });
+    if (updatedStamps >= target) {
+      setScanMessage('¡Premio desbloqueado! 🎉');
+    } else {
+      setScanMessage(`+${count} Sello agregado.`);
+    }
+  };
+
+  const handleRedeemReward = () => {
+    if (!scannedCustomer) return;
+    const target = business.loyaltyConfig.totalStamps;
+    setScannedCustomer({
+      ...scannedCustomer,
+      currentStamps: Math.max(0, scannedCustomer.currentStamps - target),
+      rewardsRedeemed: scannedCustomer.rewardsRedeemed + 1,
+    });
+    setScanMessage('¡Recompensa canjeada con éxito!');
+  };
 
   // Dynamic formatted date in Spanish
   const todayFormatted = 'domingo, 1 de noviembre';
@@ -788,9 +831,106 @@ export default function ClubifyAppPortal() {
                 Escáner de Tarjetas de Caja
               </h3>
               <p className="text-xs text-slate-500 text-center mb-4">
-                Apunta la cámara del dispositivo al código QR de la Wallet del cliente.
+                Apunta la cámara del dispositivo al código QR de la Wallet del cliente o prueba con un código demo.
               </p>
-              <CameraScanner onScan={() => {}} isScanningActive={true} />
+
+              {!scannedCustomer ? (
+                <div className="space-y-4">
+                  {/* Demo test buttons */}
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
+                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-1.5">
+                      Probar con cliente de muestra:
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleScanCode('CARD-AROMA-88219')}
+                        className="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 text-xs rounded-lg border border-slate-200 font-semibold"
+                      >
+                        Carlos (6/8 sellos)
+                      </button>
+                      <button
+                        onClick={() => handleScanCode('CARD-AROMA-19402')}
+                        className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs rounded-lg border border-emerald-200 font-bold"
+                      >
+                        Sofia (8/8 🎉 Premio listo)
+                      </button>
+                    </div>
+                  </div>
+
+                  <CameraScanner onScan={handleScanCode} isScanningActive={true} />
+
+                  {scanError && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 font-medium">
+                      {scanError}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Scanned customer card */
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                    <div>
+                      <h4 className="font-bold text-sm text-slate-900">{scannedCustomer.name}</h4>
+                      <span className="text-xs text-slate-500">{scannedCustomer.phone}</span>
+                    </div>
+                    <span className="font-mono text-[10px] bg-white border border-slate-200 px-2 py-1 rounded text-slate-600">
+                      {scannedCustomer.qrCodeToken}
+                    </span>
+                  </div>
+
+                  <div className="p-3 bg-white rounded-xl border border-slate-200">
+                    <div className="flex items-center justify-between text-xs mb-2">
+                      <span className="text-slate-500 font-medium">Progreso de Sellos:</span>
+                      <span className="font-black text-emerald-600">
+                        {scannedCustomer.currentStamps} de {business.loyaltyConfig.totalStamps} sellos
+                      </span>
+                    </div>
+                  </div>
+
+                  {scanMessage && (
+                    <div className="p-2.5 bg-emerald-100 border border-emerald-300 rounded-xl text-xs text-emerald-900 font-bold text-center">
+                      {scanMessage}
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    {scannedCustomer.currentStamps >= business.loyaltyConfig.totalStamps ? (
+                      <button
+                        onClick={handleRedeemReward}
+                        className="w-full py-3 bg-[#22c55e] hover:bg-emerald-600 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20"
+                      >
+                        <Gift className="w-4 h-4" />
+                        <span>Canjear {business.loyaltyConfig.rewardTitle}</span>
+                      </button>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => handleAddStamp(1)}
+                          className="py-3 bg-[#22c55e] hover:bg-emerald-600 text-white font-extrabold text-xs rounded-xl shadow-md shadow-emerald-500/20"
+                        >
+                          +1 Sello
+                        </button>
+                        <button
+                          onClick={() => handleAddStamp(2)}
+                          className="py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl"
+                        >
+                          +2 Sellos
+                        </button>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        setScannedCustomer(null);
+                        setScanMessage(null);
+                      }}
+                      className="w-full py-2 text-slate-500 hover:text-slate-800 text-xs font-semibold"
+                    >
+                      Escanear siguiente cliente
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

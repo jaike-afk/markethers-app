@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Camera, CameraOff, Keyboard, Volume2, AlertCircle } from 'lucide-react';
 
 interface CameraScannerProps {
@@ -13,17 +13,18 @@ export function CameraScanner({ onScan, isScanningActive }: CameraScannerProps) 
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const scannerRef = useRef<any>(null);
+  const isTransitioningRef = useRef(false);
   const elementId = 'html5qr-code-full-region';
 
-  // Audio beep generator using Web Audio API (works without external mp3)
-  const playBeep = () => {
+  // Audio beep generator using Web Audio API
+  const playBeep = useCallback(() => {
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
       const oscillator = audioCtx.createOscillator();
       const gainNode = audioCtx.createGain();
 
       oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // 880Hz A5 note
+      oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // 880Hz
       gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
       gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
 
@@ -39,16 +40,47 @@ export function CameraScanner({ onScan, isScanningActive }: CameraScannerProps) 
     } catch (e) {
       console.warn('Audio feedback failed:', e);
     }
-  };
+  }, []);
 
-  const startScanner = async () => {
+  const stopScanner = useCallback(async () => {
+    if (isTransitioningRef.current) return;
+    if (scannerRef.current) {
+      try {
+        isTransitioningRef.current = true;
+        // Html5Qrcode.getState() === 2 is SCANNING
+        if (scannerRef.current.isScanning) {
+          await scannerRef.current.stop();
+        }
+      } catch (err) {
+        // Silently ignore already stopped state
+      } finally {
+        isTransitioningRef.current = false;
+        setCameraActive(false);
+      }
+    }
+  }, []);
+
+  const startScanner = useCallback(async () => {
+    if (isTransitioningRef.current) return;
     setCameraError(null);
+
     try {
+      isTransitioningRef.current = true;
       const { Html5Qrcode } = await import('html5-qrcode');
 
-      if (!scannerRef.current) {
-        scannerRef.current = new Html5Qrcode(elementId);
+      // Ensure previous scanner instance is cleared
+      if (scannerRef.current) {
+        try {
+          if (scannerRef.current.isScanning) {
+            await scannerRef.current.stop();
+          }
+          await scannerRef.current.clear();
+        } catch (e) {
+          // ignore
+        }
       }
+
+      scannerRef.current = new Html5Qrcode(elementId);
 
       await scannerRef.current.start(
         { facingMode: 'environment' },
@@ -62,40 +94,36 @@ export function CameraScanner({ onScan, isScanningActive }: CameraScannerProps) 
           onScan(decodedText);
         },
         () => {
-          // Frame scan error (normal when no QR is in view, ignore)
+          // Ignore periodic frame scanning misses
         }
       );
       setCameraActive(true);
     } catch (err: any) {
-      console.error('Camera start error:', err);
-      setCameraError(
-        err?.message || 'No se pudo acceder a la cámara. Revisa los permisos o ingresa el código manual.'
-      );
-      setCameraActive(false);
-    }
-  };
-
-  const stopScanner = async () => {
-    if (scannerRef.current && cameraActive) {
-      try {
-        await scannerRef.current.stop();
-        setCameraActive(false);
-      } catch (err) {
-        console.warn('Camera stop error:', err);
+      // Don't show transition warnings as errors
+      const msg = err?.message || String(err);
+      if (!msg.includes('Cannot transition')) {
+        setCameraError(
+          'No se pudo acceder a la cámara o no hay permisos. Puedes ingresar el código manual abajo.'
+        );
       }
+      setCameraActive(false);
+    } finally {
+      isTransitioningRef.current = false;
     }
-  };
+  }, [onScan, playBeep]);
 
+  // Clean cleanup on unmount
   useEffect(() => {
-    if (isScanningActive && !cameraActive) {
-      startScanner();
-    }
     return () => {
-      if (scannerRef.current && cameraActive) {
-        scannerRef.current.stop().catch(() => {});
+      if (scannerRef.current) {
+        try {
+          if (scannerRef.current.isScanning) {
+            scannerRef.current.stop().catch(() => {});
+          }
+        } catch (e) {}
       }
     };
-  }, [isScanningActive]);
+  }, []);
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,13 +142,13 @@ export function CameraScanner({ onScan, isScanningActive }: CameraScannerProps) 
         {/* Scanning Target Crosshair Overlay */}
         {cameraActive && (
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-            <div className="w-64 h-64 border-2 border-dashed border-amber-400/80 rounded-2xl relative animate-pulse">
-              <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-amber-400" />
-              <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-amber-400" />
-              <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-amber-400" />
-              <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-amber-400" />
+            <div className="w-64 h-64 border-2 border-dashed border-emerald-400/80 rounded-2xl relative animate-pulse">
+              <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-emerald-400" />
+              <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-emerald-400" />
+              <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-emerald-400" />
+              <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-emerald-400" />
             </div>
-            <div className="absolute bottom-6 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full text-[11px] text-amber-300 font-medium">
+            <div className="absolute bottom-6 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full text-[11px] text-emerald-300 font-medium">
               Apunta la cámara al QR de la Wallet del cliente
             </div>
           </div>
@@ -135,7 +163,7 @@ export function CameraScanner({ onScan, isScanningActive }: CameraScannerProps) 
                 <p className="text-xs text-zinc-300 max-w-xs">{cameraError}</p>
                 <button
                   onClick={startScanner}
-                  className="px-4 py-2 bg-amber-500 text-black font-bold text-xs rounded-xl shadow"
+                  className="px-4 py-2 bg-emerald-500 text-black font-bold text-xs rounded-xl shadow"
                 >
                   Reintentar Cámara
                 </button>
@@ -148,7 +176,7 @@ export function CameraScanner({ onScan, isScanningActive }: CameraScannerProps) 
                 </p>
                 <button
                   onClick={startScanner}
-                  className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs rounded-xl shadow-lg shadow-amber-500/20 transition-all"
+                  className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
                 >
                   Encender Cámara
                 </button>
@@ -183,7 +211,7 @@ export function CameraScanner({ onScan, isScanningActive }: CameraScannerProps) 
       <form onSubmit={handleManualSubmit} className="w-full mt-4">
         <div className="flex items-center gap-1.5 text-xs text-zinc-400 mb-1.5 font-medium">
           <Keyboard className="w-3.5 h-3.5 text-zinc-500" />
-          <span>¿Problemas con la cámara? Ingresa el código manual:</span>
+          <span>Ingresar código de tarjeta manualmente:</span>
         </div>
         <div className="flex gap-2">
           <input
@@ -191,7 +219,7 @@ export function CameraScanner({ onScan, isScanningActive }: CameraScannerProps) 
             placeholder="Ej: CARD-AROMA-88219"
             value={manualCode}
             onChange={e => setManualCode(e.target.value)}
-            className="flex-1 bg-zinc-900 border border-zinc-800 text-white placeholder-zinc-500 px-3 py-2.5 rounded-xl text-xs font-mono uppercase focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="flex-1 bg-zinc-900 border border-zinc-800 text-white placeholder-zinc-500 px-3 py-2.5 rounded-xl text-xs font-mono uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
           <button
             type="submit"
