@@ -272,18 +272,18 @@ function RegisterForm() {
 
                   <div>
                     <label className="text-xs font-bold text-zinc-300 block mb-1">
-                      WhatsApp Oficial del Negocio *
+                      Teléfono Oficial del Negocio *
                     </label>
                     <input
                       type="tel"
                       required
-                      placeholder="ej. 525577889900 (donde recibirás pedidos y clientes)"
+                      placeholder="ej. +1 (555) 234-5678 o móvil de contacto"
                       value={whatsapp}
                       onChange={e => setWhatsapp(e.target.value)}
                       className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 outline-none focus:border-emerald-500"
                     />
                     <span className="text-[11px] text-zinc-500 mt-1 block">
-                      Tus comensales podrán enviarte pedidos y contactarte a este número.
+                      Número principal para contacto con clientes y alertas del sistema.
                     </span>
                   </div>
 

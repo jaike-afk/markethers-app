@@ -30,6 +30,8 @@ import {
   EyeOff,
   Image as ImageIcon,
   X,
+  Download,
+  Phone,
 } from 'lucide-react';
 
 interface ClientDashboardViewProps {
@@ -78,6 +80,27 @@ export function ClientDashboardView({
     );
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3000);
+  };
+
+  const handleExportCSV = () => {
+    const headers = ['Nombre', 'Telefono', 'Email', 'Codigo Wallet', 'Sellos Actuales', 'Total Visitas', 'Fecha Registro'];
+    const rows = customers.map(c => [
+      `"${c.name}"`,
+      `"${c.phone}"`,
+      `"${c.email || ''}"`,
+      `"${c.qrCodeToken}"`,
+      c.currentStamps,
+      c.totalVisits,
+      `"${c.createdAt || new Date().toISOString()}"`,
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `base_datos_clientes_${business.slug}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const filteredCustomers = customers.filter(
@@ -282,9 +305,18 @@ export function ClientDashboardView({
                 />
               </div>
 
-              <div className="text-xs text-zinc-400 flex items-center gap-2">
-                <span>Total socios encontrados:</span>
-                <strong className="text-white">{filteredCustomers.length}</strong>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-zinc-400">
+                  Total socios: <strong className="text-white">{filteredCustomers.length}</strong>
+                </span>
+                <button
+                  onClick={handleExportCSV}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all"
+                  title="Descargar base de datos completa en CSV"
+                >
+                  <Download className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Exportar CSV</span>
+                </button>
               </div>
             </div>
 
@@ -294,12 +326,12 @@ export function ClientDashboardView({
                   <thead className="bg-zinc-950/60 text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-800">
                     <tr>
                       <th className="py-3 px-4 font-bold">Cliente</th>
-                      <th className="py-3 px-4 font-bold">WhatsApp / Celular</th>
+                      <th className="py-3 px-4 font-bold">Teléfono / Móvil</th>
                       <th className="py-3 px-4 font-bold">Tarjeta ID</th>
                       <th className="py-3 px-4 font-bold">Sellos Actuales</th>
                       <th className="py-3 px-4 font-bold">Visitas</th>
                       <th className="py-3 px-4 font-bold">Estado</th>
-                      <th className="py-3 px-4 font-bold text-right">Acción</th>
+                      <th className="py-3 px-4 font-bold text-right">Contacto</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-800/80">
@@ -348,7 +380,15 @@ export function ClientDashboardView({
                               </span>
                             )}
                           </td>
-                          <td className="py-3.5 px-4 text-right">
+                          <td className="py-3.5 px-4 text-right flex items-center justify-end gap-1.5">
+                            <a
+                              href={`tel:${customer.phone}`}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold text-[11px] transition-colors"
+                              title="Llamar al cliente"
+                            >
+                              <Phone className="w-3 h-3 text-amber-400" />
+                              <span>Llamar</span>
+                            </a>
                             <a
                               href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(
                                 `¡Hola ${customer.name}! 👋 En ${business.name} queremos recordarte que tienes ${customer.currentStamps} sellos acumulados. ¡Ven hoy a sumar más!`
@@ -358,7 +398,7 @@ export function ClientDashboardView({
                               className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-semibold text-[11px] transition-colors border border-emerald-500/20"
                             >
                               <MessageCircle className="w-3 h-3" />
-                              <span>WhatsApp</span>
+                              <span>Mensaje</span>
                             </a>
                           </td>
                         </tr>

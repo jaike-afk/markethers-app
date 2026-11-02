@@ -15,6 +15,7 @@ import {
   Sparkles,
   CheckCircle2,
   Share2,
+  Phone,
 } from 'lucide-react';
 
 export function InfoLinkSection() {
@@ -159,16 +160,14 @@ export function InfoLinkSection() {
                 </Link>
 
                 <a
-                  href="https://wa.me/525512345678"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-2.5 px-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 text-xs font-bold rounded-xl flex items-center justify-between transition-colors"
+                  href="tel:+15551234567"
+                  className="w-full py-2.5 px-3 bg-zinc-900 hover:bg-zinc-850 text-zinc-200 border border-zinc-800 text-xs font-bold rounded-xl flex items-center justify-between transition-colors"
                 >
                   <div className="flex items-center gap-2">
-                    <MessageCircle className="w-4 h-4 text-emerald-400" />
-                    <span>Chat de WhatsApp</span>
+                    <Phone className="w-4 h-4 text-emerald-400" />
+                    <span>Contacto & Reservaciones</span>
                   </div>
-                  <span className="text-[10px] text-emerald-400 font-bold">Directo</span>
+                  <span className="text-[10px] text-zinc-400 font-bold">Llamar</span>
                 </a>
               </div>
 

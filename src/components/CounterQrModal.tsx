@@ -47,9 +47,9 @@ export function CounterQrModal({ business, isOpen, onClose, type = 'counter' }: 
     },
     infolink: {
       title: 'QR InfoLink Todo-en-Uno',
-      desc: 'El QR universal que centraliza tu menú, tarjeta Wallet, WhatsApp y Google Maps en un solo link.',
+      desc: 'El QR universal que centraliza tu menú digital, tarjeta Wallet, reseñas Google y redes en un solo link.',
       badge: '📲 Conecta con Nosotros',
-      subbadge: 'Menú • Fidelización • WhatsApp • Redes',
+      subbadge: 'Menú Digital • Tarjetas Wallet • Reseñas Google',
       path: '',
     },
   }[type];

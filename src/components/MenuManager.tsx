@@ -594,7 +594,7 @@ export function MenuManager({
                     <div>
                       <strong className="text-slate-900 block font-bold">Ambos (Recomendado)</strong>
                       <span className="text-slate-500 text-[11px]">
-                        Pueden ver la carta diseñada en PDF o navegar los productos interactivos para pedir por WhatsApp.
+                        Tus comensales pueden ver la carta oficial en PDF o explorar los platillos interactivos con fotos y videos.
                       </span>
                     </div>
                   </label>
@@ -611,7 +611,7 @@ export function MenuManager({
                     <div>
                       <strong className="text-slate-900 block font-bold">Solo Carta en PDF</strong>
                       <span className="text-slate-500 text-[11px]">
-                        Abre directamente el visor de tu carta diseñada sin lista interactiva.
+                        Abre directamente el visor de alta definición de tu carta diseñada sin lista interactiva.
                       </span>
                     </div>
                   </label>
@@ -628,7 +628,7 @@ export function MenuManager({
                     <div>
                       <strong className="text-slate-900 block font-bold">Solo Menú Interactivo</strong>
                       <span className="text-slate-500 text-[11px]">
-                        Muestra la lista de productos y carrito de pedidos por WhatsApp.
+                        Muestra el catálogo visual con fotos de platillos, videos, filtros de categorías y precios en mesa.
                       </span>
                     </div>
                   </label>

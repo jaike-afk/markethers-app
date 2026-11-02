@@ -50,6 +50,8 @@ import {
   Store,
   HelpCircle,
   ArrowRight,
+  Download,
+  Phone,
 } from 'lucide-react';
 
 export default function MarkethersAppPortal() {
@@ -110,6 +112,27 @@ export default function MarkethersAppPortal() {
   const [pushTitle, setPushTitle] = useState('¡Jueves 2x1 en Habibi Cantina! 🍹');
   const [pushMessage, setPushMessage] = useState('Ven hoy con tu tarjeta de lealtad y recibe doble sello en coctelería signature.');
   const [pushSentSuccess, setPushSentSuccess] = useState(false);
+
+  const handleExportCSV = () => {
+    const headers = ['Nombre', 'Telefono', 'Email', 'Codigo Wallet', 'Sellos Actuales', 'Total Visitas', 'Fecha Registro'];
+    const rows = customers.map(c => [
+      `"${c.name}"`,
+      `"${c.phone}"`,
+      `"${c.email || ''}"`,
+      `"${c.qrCodeToken}"`,
+      c.currentStamps,
+      c.totalVisits,
+      `"${c.createdAt || new Date().toISOString()}"`,
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `base_datos_clientes_${business.slug}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   // Card Designer state
   const business = businesses.find(b => b.id === selectedBusinessId) || businesses[0];
@@ -615,33 +638,33 @@ export default function MarkethersAppPortal() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Alert 1: WhatsApp Config */}
+                    {/* Alert 1: Print QR Codes for Tables & Counter */}
                     {!dismissWhatsappAlert && (
-                      <div className="bg-white border-2 border-amber-300 rounded-2xl p-4 shadow-sm relative flex items-start gap-3">
+                      <div className="bg-white border-2 border-indigo-200 rounded-2xl p-4 shadow-sm relative flex items-start gap-3">
                         <button
                           onClick={() => setDismissWhatsappAlert(true)}
                           className="absolute top-3 right-3 text-slate-400 hover:text-slate-600"
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
-                        <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center shrink-0 text-base">
-                          📱
+                        <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                          <QrCode className="w-4 h-4" />
                         </div>
                         <div className="pr-4">
-                          <span className="inline-block px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-black uppercase tracking-wider">
-                            Atención
+                          <span className="inline-block px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 text-[10px] font-black uppercase tracking-wider">
+                            Recomendación
                           </span>
                           <h4 className="font-bold text-sm text-slate-900 mt-1">
-                            Configura tu WhatsApp del negocio
+                            Imprime tus Códigos QR para Mesas & Mostrador
                           </h4>
                           <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-                            Es donde te llegan los pedidos. Sin esto, los clientes no pueden enviarte sus carritos.
+                            Colócalos en tus mesas y punto de pago para que los clientes vean tu menú digital y guarden su tarjeta en Apple/Google Wallet.
                           </p>
                           <button
-                            onClick={() => setIsWhatsappModalOpen(true)}
-                            className="mt-2 text-xs font-bold text-amber-700 hover:underline flex items-center gap-1"
+                            onClick={() => handleOpenQr('counter')}
+                            className="mt-2 text-xs font-bold text-indigo-700 hover:underline flex items-center gap-1"
                           >
-                            <span>Configurar</span>
+                            <span>Ver e Imprimir Códigos QR</span>
                             <span>→</span>
                           </button>
                         </div>
@@ -1037,9 +1060,9 @@ export default function MarkethersAppPortal() {
             <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
               <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="font-bold text-base text-slate-900">Directorio de Clientes VIP</h3>
+                  <h3 className="font-bold text-base text-slate-900">Base de Datos de Clientes & CRM</h3>
                   <p className="text-xs text-slate-500">
-                    Comensales que tienen guardada tu tarjeta de fidelización en su Apple o Google Wallet.
+                    Comensales registrados con tarjeta de fidelización en Apple Wallet y Google Wallet.
                   </p>
                 </div>
 
@@ -1047,6 +1070,14 @@ export default function MarkethersAppPortal() {
                   <span className="text-xs font-bold px-3 py-1 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200">
                     {customers.length} Clientes activos
                   </span>
+                  <button
+                    onClick={handleExportCSV}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-sm transition-all"
+                    title="Descargar base de datos en CSV / Excel"
+                  >
+                    <Download className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Exportar CSV</span>
+                  </button>
                 </div>
               </div>
 
@@ -1055,11 +1086,11 @@ export default function MarkethersAppPortal() {
                   <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider border-b border-slate-200">
                     <tr>
                       <th className="py-3 px-4 font-bold">Cliente</th>
-                      <th className="py-3 px-4 font-bold">WhatsApp</th>
+                      <th className="py-3 px-4 font-bold">Teléfono / Móvil</th>
                       <th className="py-3 px-4 font-bold">Código Wallet</th>
                       <th className="py-3 px-4 font-bold">Sellos acumulados</th>
                       <th className="py-3 px-4 font-bold">Visitas totales</th>
-                      <th className="py-3 px-4 font-bold text-right">Acción directa</th>
+                      <th className="py-3 px-4 font-bold text-right">Contacto directo</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -1077,15 +1108,24 @@ export default function MarkethersAppPortal() {
                           {c.currentStamps} de {business.loyaltyConfig.totalStamps} sellos
                         </td>
                         <td className="py-3.5 px-4 font-semibold">{c.totalVisits} visitas</td>
-                        <td className="py-3.5 px-4 text-right">
+                        <td className="py-3.5 px-4 text-right flex items-center justify-end gap-1.5">
+                          <a
+                            href={`tel:${c.phone}`}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs shadow-sm transition-colors"
+                            title="Llamar al cliente"
+                          >
+                            <Phone className="w-3.5 h-3.5" />
+                            <span>Llamar</span>
+                          </a>
                           <a
                             href={`https://wa.me/${c.phone.replace(/\D/g, '')}?text=¡Hola ${c.name}! Te escribimos de ${business.name}.`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#22c55e] hover:bg-emerald-600 text-white font-bold rounded-lg text-xs shadow-sm transition-colors"
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#22c55e] hover:bg-emerald-600 text-white font-bold rounded-lg text-xs shadow-sm transition-colors"
+                            title="Enviar mensaje directo"
                           >
                             <MessageCircle className="w-3.5 h-3.5" />
-                            <span>WhatsApp</span>
+                            <span>Mensaje</span>
                           </a>
                         </td>
                       </tr>
@@ -1352,7 +1392,7 @@ export default function MarkethersAppPortal() {
                 <div>
                   <h3 className="font-bold text-base text-slate-900">Potenciador de Reseñas en Google Maps</h3>
                   <p className="text-xs text-slate-500">
-                    Filtro inteligente de 5 estrellas: los clientes felices van a Google; las quejas llegan a tu WhatsApp.
+                    Filtro inteligente de 5 estrellas: los comensales felices van a Google Maps; las quejas llegan a la gerencia en privado.
                   </p>
                 </div>
 
@@ -1385,7 +1425,7 @@ export default function MarkethersAppPortal() {
                       • <strong>Si el comensal da 4 o 5 estrellas:</strong> Se abre Google Maps para que su reseña sea pública e impulse tu posicionamiento local.
                     </p>
                     <p className="text-xs text-slate-600 leading-relaxed">
-                      • <strong>Si el comensal da 1 a 3 estrellas:</strong> Se abre un formulario privado directo a tu WhatsApp para resolver la queja de inmediato.
+                      • <strong>Si el comensal da 1 a 3 estrellas:</strong> Se abre un formulario privado directo a la administración para resolver la queja de inmediato sin afectar tu rating público.
                     </p>
                   </div>
 

@@ -129,23 +129,7 @@ export function ClientStoreView({
     return sum + (item ? item.price * qty : 0);
   }, 0);
 
-  const sendWhatsAppOrder = () => {
-    const itemsList = Object.entries(cart)
-      .map(([itemId, qty]) => {
-        const item = menuItems.find(m => m.id === itemId);
-        return item ? `• ${qty}x ${item.name} ($${item.price * qty})` : '';
-      })
-      .filter(Boolean)
-      .join('\n');
 
-    const customerGreeting = currentCustomer
-      ? `Mi nombre es ${currentCustomer.name} (Cliente lealtad)`
-      : 'Nuevo pedido';
-
-    const message = `¡Hola ${business.name}! 👋\nQuiero hacer el siguiente pedido:\n\n${itemsList}\n\n*Total: ${business.currency}${totalCartAmount}*\n\n${customerGreeting}`;
-    const encoded = encodeURIComponent(message);
-    window.open(`https://wa.me/${business.whatsapp}?text=${encoded}`, '_blank');
-  };
 
   const filteredItems = menuItems.filter(item => {
     const matchesCat = selectedCategory === 'all' || item.category === selectedCategory;
@@ -431,18 +415,23 @@ export function ClientStoreView({
                   )}
                 </div>
 
-                <div className="pt-2 text-center">
-                  <a
-                    href={`https://wa.me/${business.whatsapp}?text=${encodeURIComponent(
-                      `¡Hola ${business.name}! 👋 He visto su carta en PDF y me gustaría hacer un pedido.`
-                    )}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+                <div className="pt-2 flex flex-col sm:flex-row gap-2">
+                  <button
+                    onClick={() => setActiveTab('card')}
+                    className="flex-1 py-3 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
                   >
-                    <MessageCircle className="w-4 h-4" />
-                    <span>¿Listo para ordenar? Escríbenos por WhatsApp</span>
-                  </a>
+                    <CreditCard className="w-4 h-4" />
+                    <span>Guardar Tarjeta Wallet & Sumar Sellos</span>
+                  </button>
+                  {business.phone && (
+                    <a
+                      href={`tel:${business.phone}`}
+                      className="py-3 px-4 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2"
+                    >
+                      <Phone className="w-4 h-4 text-emerald-400" />
+                      <span>Llamar al Local</span>
+                    </a>
+                  )}
                 </div>
               </div>
             ) : (
@@ -592,27 +581,36 @@ export function ClientStoreView({
               </>
             )}
 
-            {/* Sticky WhatsApp Checkout Bar when items in cart */}
+            {/* Sticky Table Order Summary Bar when items selected */}
             {totalCartCount > 0 && customerMenuViewMode === 'interactive' && (
               <div className="fixed bottom-4 left-4 right-4 max-w-md mx-auto z-40">
                 <div className="bg-zinc-900 border border-amber-500/50 rounded-2xl p-3.5 shadow-2xl flex items-center justify-between backdrop-blur-xl">
                   <div>
                     <span className="text-[10px] text-zinc-400 uppercase font-bold block">
-                      {totalCartCount} producto(s) en pedido
+                      {totalCartCount} platillo(s) seleccionados
                     </span>
                     <span className="text-base font-black text-amber-400">
-                      Total: {business.currency}
+                      Total estimado: {business.currency}
                       {totalCartAmount}
                     </span>
                   </div>
 
-                  <button
-                    onClick={sendWhatsAppOrder}
-                    className="py-2.5 px-4 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    <span>Pedir por WhatsApp</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCart({})}
+                      className="py-2 px-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white font-bold text-xs rounded-xl transition-all"
+                      title="Limpiar selección"
+                    >
+                      Limpiar
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('card')}
+                      className="py-2.5 px-3.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-extrabold text-xs rounded-xl flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition-all active:scale-95"
+                    >
+                      <CreditCard className="w-4 h-4" />
+                      <span>Sumar Sellos</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
