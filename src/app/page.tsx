@@ -821,7 +821,7 @@ export default function HomePage() {
             <div className="w-6 h-6 rounded-lg bg-emerald-500 text-black flex items-center justify-center font-black text-xs">
               M
             </div>
-            <span className="font-bold text-white">Markethers Loyalty SaaS</span>
+            <span className="font-bold text-white">Markethers</span>
             <span className="text-[10px] text-zinc-400">— {t.footer.slogan}</span>
           </div>
 

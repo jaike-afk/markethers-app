@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'Markethers | Plataforma de Fidelización en Apple Wallet & Google Wallet',
   description:
-    'SaaS de lealtad para comercios locales. Tarjetas de sellos digitales en Apple Wallet y Google Wallet, menús digitales y escáner PWA para cajeros sin necesidad de apps.',
+    'Plataforma de lealtad para comercios locales. Tarjetas de sellos digitales en Apple Wallet y Google Wallet, menús digitales y escáner PWA para cajeros sin necesidad de apps.',
 };
 
 export default function RootLayout({

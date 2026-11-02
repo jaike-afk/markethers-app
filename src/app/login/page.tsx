@@ -106,7 +106,7 @@ export default function LoginPage() {
 
       {/* Footer */}
       <div className="text-center text-xs text-zinc-500">
-        Markethers SaaS • Sistema de fidelización y menús digitales sin comisiones
+        Markethers • Sistema de fidelización y menús digitales sin comisiones
       </div>
     </div>
   );

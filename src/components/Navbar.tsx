@@ -51,9 +51,6 @@ export function Navbar() {
               <span className="font-extrabold text-base tracking-tight text-white">
                 Markethers
               </span>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                Wallet SaaS
-              </span>
             </div>
             <span
               className="text-[10px] text-zinc-400 -mt-0.5 block"
