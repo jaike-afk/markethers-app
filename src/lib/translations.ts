@@ -355,7 +355,7 @@ export const translations: Record<'es' | 'en', Translations> = {
     infoLink: {
       tag: 'Ecosistema Todo en Uno',
       headline: 'Un Solo Enlace Inteligente para',
-      headlineHighlight: 'Instagram, WhatsApp y tus Mesas',
+      headlineHighlight: 'Instagram y tus Mesas',
       subtitle:
         'Reemplaza los enlaces genéricos de Linktree. Markethers te da una página ultra rápida que convierte seguidores de redes en comensales presenciales y pedidos directos.',
       feature1Title: 'Carta Digital con Fotos & Videos:',
@@ -733,7 +733,7 @@ export const translations: Record<'es' | 'en', Translations> = {
     infoLink: {
       tag: 'All-In-One Ecosystem',
       headline: 'One Smart Bio Link for',
-      headlineHighlight: 'Instagram, WhatsApp & Tables',
+      headlineHighlight: 'Instagram & Tables',
       subtitle:
         'Replace generic link-in-bio pages. Markethers gives you an ultra-fast portal that turns social media followers into in-person diners and direct orders.',
       feature1Title: 'Digital Menu with Photos & Videos:',
