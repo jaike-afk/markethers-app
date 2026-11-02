@@ -21,7 +21,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { store } from '@/lib/store';
-import { Business } from '@/types';
+import { Business, Customer, MenuItem, StampTransaction } from '@/types';
 import { validateCreditCard, saveUser } from '@/lib/auth';
 
 function RegisterForm() {
@@ -191,10 +191,206 @@ function RegisterForm() {
 
       store.addBusiness(newBiz);
 
+      // Auto-provision initial owner customer, initial transaction, and starter menu items
+      const cleanPrefix = (slug || 'BIZ').slice(0, 4).toUpperCase().replace(/[^A-Z0-9]/g, 'X');
+      const ownerCustomer: Customer = {
+        id: `cust_${newBiz.id}_owner`,
+        businessId: newBiz.id,
+        name: ownerName || 'Propietario',
+        phone: whatsapp || '+52 55 1234 5678',
+        email: email.trim().toLowerCase(),
+        qrCodeToken: `CARD-${cleanPrefix}-1001`,
+        currentStamps: 1,
+        totalVisits: 1,
+        rewardsEarned: 0,
+        rewardsRedeemed: 0,
+        points: 20,
+        totalSpent: 0,
+        tier: 'vip',
+        walletPassType: 'apple',
+        notes: 'Pase del Propietario / Tarjeta de prueba inicial',
+        createdAt: new Date().toISOString(),
+        lastVisitAt: new Date().toISOString(),
+      };
+
+      const initialTx: StampTransaction = {
+        id: `tx_${Date.now()}_welcome`,
+        businessId: newBiz.id,
+        customerId: ownerCustomer.id,
+        customerName: ownerCustomer.name,
+        type: 'STAMP_ADDED',
+        stampsChanged: 1,
+        notes: 'Sello de bienvenida por activación de cuenta',
+        staffName: 'Sistema Markethers',
+        createdAt: new Date().toISOString(),
+      };
+
+      // Generate 3 starter menu items adapted to the merchant's category
+      let starterItems: MenuItem[] = [];
+      const catLower = (businessCategory || '').toLowerCase();
+      if (catLower.includes('palet') || catLower.includes('helad')) {
+        starterItems = [
+          {
+            id: `menu_${Date.now()}_1`,
+            businessId: newBiz.id,
+            name: 'Paleta Artesanal de Frutas Naturales',
+            category: 'Paletas de Agua',
+            price: 35,
+            description: 'Elaborada artesanalmente con fruta 100% natural (Fresa, Mango Chamoy, Maracuyá o Limón).',
+            imageUrl: 'https://images.unsplash.com/photo-1505394033641-40c6ad1178d7?auto=format&fit=crop&w=400&q=80',
+            available: true,
+            featured: true,
+          },
+          {
+            id: `menu_${Date.now()}_2`,
+            businessId: newBiz.id,
+            name: 'Nieve Cremosa Especial (2 Bolas)',
+            category: 'Nieves de Leche',
+            price: 55,
+            description: 'Receta tradicional cremosa de vainilla con nuez garapiñada y chocolate belga.',
+            imageUrl: 'https://images.unsplash.com/photo-1560008511-11c63416e52d?auto=format&fit=crop&w=400&q=80',
+            available: true,
+            featured: true,
+          },
+          {
+            id: `menu_${Date.now()}_3`,
+            businessId: newBiz.id,
+            name: 'Mangonada Especial con Chamoy & Gomitas',
+            category: 'Especialidades',
+            price: 65,
+            description: 'Nieve de mango con chamoy de la casa, chilito Tajín y gomitas de tamarindo.',
+            imageUrl: 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=400&q=80',
+            available: true,
+            featured: false,
+          },
+        ];
+      } else if (catLower.includes('caf') || catLower.includes('brunch')) {
+        starterItems = [
+          {
+            id: `menu_${Date.now()}_1`,
+            businessId: newBiz.id,
+            name: 'Flat White de Especialidad',
+            category: 'Bebidas Calientes',
+            price: 65,
+            description: 'Doble shot de espresso de grano mexicano con microespuma de leche texturizada sedosa.',
+            imageUrl: 'https://images.unsplash.com/photo-1577968897966-3d4325b36b61?auto=format&fit=crop&w=400&q=80',
+            available: true,
+            featured: true,
+          },
+          {
+            id: `menu_${Date.now()}_2`,
+            businessId: newBiz.id,
+            name: 'Tostada de Aguacate con Huevo Poché',
+            category: 'Brunch & Desayunos',
+            price: 130,
+            description: 'Pan de masa madre tostado, puré de aguacate fresco, huevo poché orgánico y dukkah.',
+            imageUrl: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=400&q=80',
+            available: true,
+            featured: true,
+          },
+          {
+            id: `menu_${Date.now()}_3`,
+            businessId: newBiz.id,
+            name: 'Croissant Horneado de Almendras',
+            category: 'Repostería Artesanal',
+            price: 55,
+            description: 'Hojaldre 100% de mantequilla relleno de crema frangipane y almendras fileteadas.',
+            imageUrl: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=400&q=80',
+            available: true,
+            featured: false,
+          },
+        ];
+      } else if (catLower.includes('bar') || catLower.includes('cantina') || catLower.includes('pub')) {
+        starterItems = [
+          {
+            id: `menu_${Date.now()}_1`,
+            businessId: newBiz.id,
+            name: 'Cóctel Signature de la Casa',
+            category: 'Coctelería de Autor',
+            price: 140,
+            description: 'Destilado premium, infusión de frutos de temporada y jarabe artesanal.',
+            imageUrl: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=400&q=80',
+            available: true,
+            featured: true,
+          },
+          {
+            id: `menu_${Date.now()}_2`,
+            businessId: newBiz.id,
+            name: 'Botana Clásica de Cantina',
+            category: 'Botanas & Entradas',
+            price: 120,
+            description: 'Selección de la casa servida con salsas tradicionales y totopos crujientes.',
+            imageUrl: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=400&q=80',
+            available: true,
+            featured: true,
+          },
+          {
+            id: `menu_${Date.now()}_3`,
+            businessId: newBiz.id,
+            name: 'Cerveza Artesanal de Línea',
+            category: 'Cervezas',
+            price: 85,
+            description: 'Cerveza de barril estilo artesanal servida bien fría en tarro escarchado.',
+            imageUrl: 'https://images.unsplash.com/photo-1608270119337-1422b4ca1a2a?auto=format&fit=crop&w=400&q=80',
+            available: true,
+            featured: false,
+          },
+        ];
+      } else {
+        starterItems = [
+          {
+            id: `menu_${Date.now()}_1`,
+            businessId: newBiz.id,
+            name: 'Platillo Insignia de la Casa',
+            category: 'Especialidades',
+            price: 185,
+            description: 'Nuestra receta más destacada con ingredientes frescos seleccionados del día.',
+            imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=400&q=80',
+            available: true,
+            featured: true,
+          },
+          {
+            id: `menu_${Date.now()}_2`,
+            businessId: newBiz.id,
+            name: 'Entrada Tradicional & Ensalada Fresca',
+            category: 'Entradas',
+            price: 115,
+            description: 'Combinación fresca de vegetales de huerto con vinagreta de la casa.',
+            imageUrl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=400&q=80',
+            available: true,
+            featured: true,
+          },
+          {
+            id: `menu_${Date.now()}_3`,
+            businessId: newBiz.id,
+            name: 'Bebida Refrescante Artesanal',
+            category: 'Bebidas',
+            price: 45,
+            description: 'Agua infusionada natural con menta, pepino y toque cítrico.',
+            imageUrl: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=400&q=80',
+            available: true,
+            featured: false,
+          },
+        ];
+      }
+
       if (typeof window !== 'undefined') {
         localStorage.setItem('markethers_active_business_id', newBiz.id);
         const existingBizList = JSON.parse(localStorage.getItem('markethers_custom_businesses') || '[]');
         localStorage.setItem('markethers_custom_businesses', JSON.stringify([...existingBizList, newBiz]));
+
+        // Persist initial owner customer in customer DB
+        const existingCustomers = JSON.parse(localStorage.getItem('markethers_customers_db') || '[]');
+        localStorage.setItem('markethers_customers_db', JSON.stringify([ownerCustomer, ...existingCustomers]));
+
+        // Persist welcome transaction in transaction DB
+        const existingTx = JSON.parse(localStorage.getItem('markethers_transactions_db') || '[]');
+        localStorage.setItem('markethers_transactions_db', JSON.stringify([initialTx, ...existingTx]));
+
+        // Persist starter menu items in menu DB
+        const existingMenu = JSON.parse(localStorage.getItem('markethers_menu_items_db') || '[]');
+        localStorage.setItem('markethers_menu_items_db', JSON.stringify([...starterItems, ...existingMenu]));
+
         localStorage.setItem(
           'markethers_subscription',
           JSON.stringify({

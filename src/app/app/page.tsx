@@ -93,10 +93,11 @@ export default function MarkethersAppPortal() {
     | 'facturacion'
   >('panel');
 
-  // Customer & Sales Database State (persisted in localStorage)
+  // Customer, Sales & Menu Database State (persisted in localStorage)
   const [allCustomers, setAllCustomers] = useState<Customer[]>(INITIAL_CUSTOMERS);
   const [allSales, setAllSales] = useState<SaleRecord[]>(INITIAL_SALES);
   const [allTransactions, setAllTransactions] = useState<StampTransaction[]>(INITIAL_TRANSACTIONS);
+  const [allMenuItems, setAllMenuItems] = useState<MenuItem[]>(INITIAL_MENU_ITEMS);
 
   // Period & Filter state for Executive Dashboard
   const [dashboardPeriod, setDashboardPeriod] = useState<'today' | '7d' | '30d' | 'all'>('today');
@@ -223,18 +224,26 @@ export default function MarkethersAppPortal() {
       setCurrentUser(user);
       setAuthChecking(false);
 
-      const customBiz = JSON.parse(localStorage.getItem('markethers_custom_businesses') || '[]');
-      if (customBiz.length > 0) {
-        setBusinesses([...customBiz, ...INITIAL_BUSINESSES]);
-        const activeBizId = localStorage.getItem('markethers_active_business_id') || user.businessId;
-        if (activeBizId && [...customBiz, ...INITIAL_BUSINESSES].some((b: Business) => b.id === activeBizId)) {
+      const customBiz: Business[] = JSON.parse(localStorage.getItem('markethers_custom_businesses') || '[]');
+      const allAvailableBiz: Business[] = [...customBiz, ...INITIAL_BUSINESSES];
+      const isSuperAdmin = user.email.toLowerCase() === 'jaikeromero@gmail.com';
+
+      if (isSuperAdmin) {
+        setBusinesses(allAvailableBiz);
+        const activeBizId = localStorage.getItem('markethers_active_business_id') || user.businessId || allAvailableBiz[0].id;
+        if (allAvailableBiz.some((b: Business) => b.id === activeBizId)) {
           setSelectedBusinessId(activeBizId);
         } else {
-          setSelectedBusinessId(customBiz[0].id);
+          setSelectedBusinessId(allAvailableBiz[0].id);
         }
-      } else if (user.businessId && INITIAL_BUSINESSES.some(b => b.id === user.businessId)) {
-        setSelectedBusinessId(user.businessId);
+      } else {
+        // Strict merchant isolation: only ever view their own business
+        const userBiz = allAvailableBiz.find((b: Business) => b.id === user.businessId) || customBiz[0] || INITIAL_BUSINESSES[0];
+        setBusinesses([userBiz]);
+        setSelectedBusinessId(userBiz.id);
+        localStorage.setItem('markethers_active_business_id', userBiz.id);
       }
+
       const savedSub = localStorage.getItem('markethers_subscription');
       if (savedSub) {
         const parsed = JSON.parse(savedSub);
@@ -275,6 +284,18 @@ export default function MarkethersAppPortal() {
         }
       } else {
         localStorage.setItem('markethers_transactions_db', JSON.stringify(INITIAL_TRANSACTIONS));
+      }
+
+      // Load or initialize menu items DB
+      const storedMenu = localStorage.getItem('markethers_menu_items_db');
+      if (storedMenu) {
+        try {
+          setAllMenuItems(JSON.parse(storedMenu));
+        } catch {
+          setAllMenuItems(INITIAL_MENU_ITEMS);
+        }
+      } else {
+        localStorage.setItem('markethers_menu_items_db', JSON.stringify(INITIAL_MENU_ITEMS));
       }
 
       setCurrentTimestamp(Date.now());
@@ -380,18 +401,22 @@ Contacto y Soporte: soporte@markethers.com
   const [whatsappNumberInput, setWhatsappNumberInput] = useState(business.whatsapp || '525577889900');
   const [saveDesignerSuccess, setSaveDesignerSuccess] = useState(false);
 
-  const customers = allCustomers.filter(c => c.businessId === business.id).length > 0
-    ? allCustomers.filter(c => c.businessId === business.id)
-    : allCustomers;
-  const sales = allSales.filter(s => s.businessId === business.id).length > 0
-    ? allSales.filter(s => s.businessId === business.id)
-    : allSales;
-  const menuItems = INITIAL_MENU_ITEMS.filter(m => m.businessId === business.id).length > 0
-    ? INITIAL_MENU_ITEMS.filter(m => m.businessId === business.id)
-    : INITIAL_MENU_ITEMS;
-  const transactions = allTransactions.filter(t => t.businessId === business.id).length > 0
-    ? allTransactions.filter(t => t.businessId === business.id)
-    : allTransactions;
+  // Strictly isolate customers, sales, menuItems, and transactions per business ID (NO cross-tenant leaks)
+  const customers = allCustomers.filter(c => c.businessId === business.id);
+  const sales = allSales.filter(s => s.businessId === business.id);
+  const menuItems = allMenuItems.filter(m => m.businessId === business.id);
+  const transactions = allTransactions.filter(t => t.businessId === business.id);
+
+  const handleUpdateMenuItems = (updatedItems: MenuItem[]) => {
+    setAllMenuItems(prev => {
+      const others = prev.filter(m => m.businessId !== business.id);
+      const combined = [...others, ...updatedItems];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('markethers_menu_items_db', JSON.stringify(combined));
+      }
+      return combined;
+    });
+  };
 
   // Filtered by Executive Dashboard period
   const filteredSales = sales.filter(s => {
@@ -1181,18 +1206,28 @@ Contacto y Soporte: soporte@markethers.com
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Business switcher */}
-            <select
-              value={selectedBusinessId}
-              onChange={e => setSelectedBusinessId(e.target.value)}
-              className="hidden sm:block text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-700 outline-none"
-            >
-              {businesses.map(b => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
+            {/* Business switcher / Active business badge */}
+            {currentUser?.email.toLowerCase() === 'jaikeromero@gmail.com' ? (
+              <select
+                value={selectedBusinessId}
+                onChange={e => setSelectedBusinessId(e.target.value)}
+                className="hidden sm:block text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-700 outline-none"
+              >
+                {businesses.map(b => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="max-w-[160px] truncate">{business.name}</span>
+                <span className="text-[10px] text-emerald-700 font-extrabold px-1.5 py-0.2 bg-emerald-50 rounded border border-emerald-200">
+                  Tu Local
+                </span>
+              </div>
+            )}
 
             {/* Active Subscription Pill Button */}
             <button
@@ -1665,26 +1700,42 @@ Contacto y Soporte: soporte@markethers.com
                     </div>
 
                     <div className="space-y-3">
-                      {menuItems.slice(0, 4).map((item, idx) => (
-                        <div key={item.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-black text-[10px] flex items-center justify-center shrink-0">
-                              #{idx + 1}
-                            </span>
-                            <div className="min-w-0">
-                              <span className="text-xs font-bold text-slate-900 block truncate">
-                                {item.name}
-                              </span>
-                              <span className="text-[10px] text-slate-500 block">
-                                {item.category} • ${item.price}
-                              </span>
-                            </div>
-                          </div>
-                          <span className="text-xs font-black text-emerald-600 shrink-0">
-                            +{12 - idx * 3} pedidos
-                          </span>
+                      {menuItems.length === 0 ? (
+                        <div className="p-6 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                          <p className="text-xs font-bold text-slate-700">Aún no hay platillos cargados</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            Comienza agregando los productos estrella de tu carta.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setActiveSection('menu')}
+                            className="mt-2 text-xs font-bold text-emerald-600 hover:underline inline-block"
+                          >
+                            + Gestionar Carta
+                          </button>
                         </div>
-                      ))}
+                      ) : (
+                        menuItems.slice(0, 4).map((item, idx) => (
+                          <div key={item.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-black text-[10px] flex items-center justify-center shrink-0">
+                                #{idx + 1}
+                              </span>
+                              <div className="min-w-0">
+                                <span className="text-xs font-bold text-slate-900 block truncate">
+                                  {item.name}
+                                </span>
+                                <span className="text-[10px] text-slate-500 block">
+                                  {item.category} • ${item.price}
+                                </span>
+                              </div>
+                            </div>
+                            <span className="text-xs font-black text-emerald-600 shrink-0">
+                              +{12 - idx * 3} pedidos
+                            </span>
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
 
@@ -1721,58 +1772,74 @@ Contacto y Soporte: soporte@markethers.com
 
                     {/* Movement feed */}
                     <div className="space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
-                      {transactions.slice(0, 5).map(t => (
-                        <div
-                          key={t.id}
-                          className="p-3 rounded-xl border border-slate-100 hover:border-slate-200 bg-slate-50/70 transition-all flex items-center justify-between gap-3 text-xs"
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div
-                              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                                t.type === 'REWARD_REDEEMED'
-                                  ? 'bg-amber-100 text-amber-700'
-                                  : t.notes?.includes('Venta')
-                                  ? 'bg-emerald-100 text-emerald-700'
-                                  : 'bg-blue-100 text-blue-700'
-                              }`}
-                            >
-                              {t.type === 'REWARD_REDEEMED' ? '🎁' : t.notes?.includes('Venta') ? '💰' : '⭐'}
-                            </div>
+                      {transactions.length === 0 ? (
+                        <div className="p-6 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                          <p className="text-xs font-bold text-slate-700">Sin movimientos registrados</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            Las ventas y sellos de tarjetas Wallet se reflejarán aquí al instante.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setIsRecordSaleModalOpen(true)}
+                            className="mt-2 text-xs font-bold text-emerald-600 hover:underline inline-block"
+                          >
+                            + Registrar primera venta
+                          </button>
+                        </div>
+                      ) : (
+                        transactions.slice(0, 5).map(t => (
+                          <div
+                            key={t.id}
+                            className="p-3 rounded-xl border border-slate-100 hover:border-slate-200 bg-slate-50/70 transition-all flex items-center justify-between gap-3 text-xs"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div
+                                className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                                  t.type === 'REWARD_REDEEMED'
+                                    ? 'bg-amber-100 text-amber-700'
+                                    : t.notes?.includes('Venta')
+                                    ? 'bg-emerald-100 text-emerald-700'
+                                    : 'bg-blue-100 text-blue-700'
+                                }`}
+                              >
+                                {t.type === 'REWARD_REDEEMED' ? '🎁' : t.notes?.includes('Venta') ? '💰' : '⭐'}
+                              </div>
 
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold text-slate-900 truncate">
-                                  {t.customerName}
-                                </span>
-                                <span
-                                  className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
-                                    t.type === 'REWARD_REDEEMED'
-                                      ? 'bg-amber-100 text-amber-800'
-                                      : 'bg-emerald-100 text-emerald-800'
-                                  }`}
-                                >
-                                  {t.type === 'REWARD_REDEEMED' ? 'Premio' : 'Sello'}
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-slate-900 truncate">
+                                    {t.customerName}
+                                  </span>
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
+                                      t.type === 'REWARD_REDEEMED'
+                                        ? 'bg-amber-100 text-amber-800'
+                                        : 'bg-emerald-100 text-emerald-800'
+                                    }`}
+                                  >
+                                    {t.type === 'REWARD_REDEEMED' ? 'Premio' : 'Sello'}
+                                  </span>
+                                </div>
+                                <span className="text-[11px] text-slate-500 block truncate mt-0.5">
+                                  {t.notes || 'Operación en mostrador'}
                                 </span>
                               </div>
-                              <span className="text-[11px] text-slate-500 block truncate mt-0.5">
-                                {t.notes || 'Operación en mostrador'}
+                            </div>
+
+                            <div className="text-right shrink-0">
+                              <span className="font-mono text-[11px] text-slate-400 block">
+                                {new Date(t.createdAt).toLocaleDateString('es-MX', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </span>
+                              <span className="text-[10px] text-slate-500 font-medium">
+                                {t.staffName}
                               </span>
                             </div>
                           </div>
-
-                          <div className="text-right shrink-0">
-                            <span className="font-mono text-[11px] text-slate-400 block">
-                              {new Date(t.createdAt).toLocaleDateString('es-MX', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </span>
-                            <span className="text-[10px] text-slate-500 font-medium">
-                              {t.staffName}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </div>
 
@@ -2327,96 +2394,134 @@ Contacto y Soporte: soporte@markethers.com
                             c.phone.toLowerCase().includes(q) ||
                             c.qrCodeToken.toLowerCase().includes(q)
                           );
-                        })
-                        .map(c => {
-                          const target = business.loyaltyConfig.totalStamps;
-                          const pct = Math.min(100, Math.round((c.currentStamps / target) * 100));
-                          return (
-                            <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
-                              <td className="py-3.5 px-4 font-bold text-slate-900">
-                                <div className="flex items-center gap-2.5">
-                                  <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-500 text-zinc-950 font-black text-[11px] flex items-center justify-center shrink-0">
-                                    {c.name.charAt(0)}
-                                  </div>
-                                  <div>
-                                    <div className="flex items-center gap-1.5">
-                                      <span>{c.name}</span>
-                                      {c.tier === 'vip' && (
-                                        <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[9px] font-black uppercase">
-                                          VIP
-                                        </span>
-                                      )}
+                        }).length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="py-12 text-center text-slate-500">
+                            <div className="text-4xl mb-2">👥</div>
+                            <p className="font-bold text-slate-800 text-sm">
+                              {customers.length === 0
+                                ? `Aún no hay clientes registrados en ${business.name}`
+                                : 'No se encontraron clientes con este filtro'}
+                            </p>
+                            <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                              {customers.length === 0
+                                ? 'Tus comensales aparecerán aquí en cuanto instalen tu tarjeta en su Apple o Google Wallet, o registres su primer consumo.'
+                                : 'Intenta cambiar el criterio de búsqueda o el filtro de categoría.'}
+                            </p>
+                            {customers.length === 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setIsNewCustomerModalOpen(true)}
+                                className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-[#22c55e] hover:bg-emerald-600 text-black font-extrabold text-xs rounded-xl shadow-md cursor-pointer transition-all"
+                              >
+                                <Plus className="w-4 h-4 stroke-[3]" />
+                                <span>+ Registrar Primer Cliente</span>
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ) : (
+                        customers
+                          .filter(c => {
+                            if (customerFilterTier !== 'all' && c.tier !== customerFilterTier) return false;
+                            if (!customerSearchQuery.trim()) return true;
+                            const q = customerSearchQuery.toLowerCase();
+                            return (
+                              c.name.toLowerCase().includes(q) ||
+                              c.phone.toLowerCase().includes(q) ||
+                              c.qrCodeToken.toLowerCase().includes(q)
+                            );
+                          })
+                          .map(c => {
+                            const target = business.loyaltyConfig.totalStamps;
+                            const pct = Math.min(100, Math.round((c.currentStamps / target) * 100));
+                            return (
+                              <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
+                                <td className="py-3.5 px-4 font-bold text-slate-900">
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-500 text-zinc-950 font-black text-[11px] flex items-center justify-center shrink-0">
+                                      {c.name.charAt(0)}
                                     </div>
-                                    <span className="text-[10px] text-slate-400 font-normal block">
-                                      {c.email || 'Sin correo registrado'}
-                                    </span>
+                                    <div>
+                                      <div className="flex items-center gap-1.5">
+                                        <span>{c.name}</span>
+                                        {c.tier === 'vip' && (
+                                          <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[9px] font-black uppercase">
+                                            VIP
+                                          </span>
+                                        )}
+                                      </div>
+                                      <span className="text-[10px] text-slate-400 font-normal block">
+                                        {c.email || 'Sin correo registrado'}
+                                      </span>
+                                    </div>
                                   </div>
-                                </div>
-                              </td>
+                                </td>
 
-                              <td className="py-3.5 px-4 font-mono text-slate-600">
-                                {c.phone}
-                              </td>
+                                <td className="py-3.5 px-4 font-mono text-slate-600">
+                                  {c.phone}
+                                </td>
 
-                              <td className="py-3.5 px-4">
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                                  {c.walletPassType === 'google' ? '🤖 Google' : '🍏 Apple'} • {c.qrCodeToken.slice(-4)}
-                                </span>
-                              </td>
+                                <td className="py-3.5 px-4">
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                    {c.walletPassType === 'google' ? '🤖 Google' : '🍏 Apple'} • {c.qrCodeToken.slice(-4)}
+                                  </span>
+                                </td>
 
-                              <td className="py-3.5 px-4 font-bold text-slate-900">
-                                $ {(c.totalSpent || 0).toLocaleString()}
-                              </td>
+                                <td className="py-3.5 px-4 font-bold text-slate-900">
+                                  $ {(c.totalSpent || 0).toLocaleString()}
+                                </td>
 
-                              <td className="py-3.5 px-4">
-                                <div className="space-y-1">
-                                  <div className="flex items-center justify-between text-[10px]">
-                                    <span className="font-bold text-emerald-600">
-                                      {c.currentStamps} de {target} sellos
-                                    </span>
-                                    <span className="text-slate-400">{pct}%</span>
+                                <td className="py-3.5 px-4">
+                                  <div className="space-y-1">
+                                    <div className="flex items-center justify-between text-[10px]">
+                                      <span className="font-bold text-emerald-600">
+                                        {c.currentStamps} de {target} sellos
+                                      </span>
+                                      <span className="text-slate-400">{pct}%</span>
+                                    </div>
+                                    <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                      <div
+                                        className="h-full bg-emerald-500 rounded-full transition-all"
+                                        style={{ width: `${pct}%` }}
+                                      />
+                                    </div>
                                   </div>
-                                  <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                    <div
-                                      className="h-full bg-emerald-500 rounded-full transition-all"
-                                      style={{ width: `${pct}%` }}
-                                    />
+                                </td>
+
+                                <td className="py-3.5 px-4 font-semibold text-slate-800">
+                                  <div>{c.totalVisits} visitas</div>
+                                  <span className="text-[10px] text-slate-400 block font-normal">
+                                    {new Date(c.lastVisitAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+                                  </span>
+                                </td>
+
+                                <td className="py-3.5 px-4 text-right">
+                                  <div className="flex items-center justify-end gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedCustomerDetail(c)}
+                                      className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-lg text-xs transition-colors cursor-pointer"
+                                      title="Ver ficha completa e historial"
+                                    >
+                                      Ver Ficha
+                                    </button>
+
+                                    <a
+                                      href={`https://wa.me/${c.phone.replace(/\D/g, '')}?text=¡Hola ${c.name}! Te escribimos de ${business.name}.`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="p-1.5 bg-[#22c55e] hover:bg-emerald-600 text-white font-bold rounded-lg text-xs transition-colors"
+                                      title="WhatsApp directo"
+                                    >
+                                      <MessageCircle className="w-3.5 h-3.5" />
+                                    </a>
                                   </div>
-                                </div>
-                              </td>
-
-                              <td className="py-3.5 px-4 font-semibold text-slate-800">
-                                <div>{c.totalVisits} visitas</div>
-                                <span className="text-[10px] text-slate-400 block font-normal">
-                                  {new Date(c.lastVisitAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
-                                </span>
-                              </td>
-
-                              <td className="py-3.5 px-4 text-right">
-                                <div className="flex items-center justify-end gap-1.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => setSelectedCustomerDetail(c)}
-                                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-lg text-xs transition-colors cursor-pointer"
-                                    title="Ver ficha completa e historial"
-                                  >
-                                    Ver Ficha
-                                  </button>
-
-                                  <a
-                                    href={`https://wa.me/${c.phone.replace(/\D/g, '')}?text=¡Hola ${c.name}! Te escribimos de ${business.name}.`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="p-1.5 bg-[#22c55e] hover:bg-emerald-600 text-white font-bold rounded-lg text-xs transition-colors"
-                                    title="WhatsApp directo"
-                                  >
-                                    <MessageCircle className="w-3.5 h-3.5" />
-                                  </a>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
+                                </td>
+                              </tr>
+                            );
+                          })
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -2555,34 +2660,48 @@ Contacto y Soporte: soporte@markethers.com
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700">
-                    {transactions.map(t => (
-                      <tr key={t.id} className="hover:bg-slate-50/80">
-                        <td className="py-3 px-4 font-mono text-slate-500">
-                          {new Date(t.createdAt).toLocaleDateString('es-MX', {
-                            day: 'numeric',
-                            month: 'short',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                    {transactions.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-12 text-center text-slate-500">
+                          <div className="text-4xl mb-2">📜</div>
+                          <p className="font-bold text-slate-800 text-sm">
+                            No hay movimientos ni sellos registrados en {business.name} aún
+                          </p>
+                          <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                            Cuando uses el escáner de caja para validar una visita o registres una venta, los movimientos quedarán auditados aquí.
+                          </p>
                         </td>
-                        <td className="py-3 px-4 font-bold text-slate-900">{t.customerName}</td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              t.type === 'REWARD_REDEEMED'
-                                ? 'bg-amber-100 text-amber-800'
-                                : 'bg-emerald-100 text-emerald-800'
-                            }`}
-                          >
-                            {t.type === 'REWARD_REDEEMED' ? '🎁 Canje de Premio' : '☑️ Sello de Visita'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 font-bold text-emerald-600">
-                          {t.type === 'REWARD_REDEEMED' ? 'Premio Entregado' : `+${t.stampsChanged}`}
-                        </td>
-                        <td className="py-3 px-4 text-slate-500">{t.staffName}</td>
                       </tr>
-                    ))}
+                    ) : (
+                      transactions.map(t => (
+                        <tr key={t.id} className="hover:bg-slate-50/80">
+                          <td className="py-3 px-4 font-mono text-slate-500">
+                            {new Date(t.createdAt).toLocaleDateString('es-MX', {
+                              day: 'numeric',
+                              month: 'short',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </td>
+                          <td className="py-3 px-4 font-bold text-slate-900">{t.customerName}</td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                t.type === 'REWARD_REDEEMED'
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : 'bg-emerald-100 text-emerald-800'
+                              }`}
+                            >
+                              {t.type === 'REWARD_REDEEMED' ? '🎁 Canje de Premio' : '☑️ Sello de Visita'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 font-bold text-emerald-600">
+                            {t.type === 'REWARD_REDEEMED' ? 'Premio Entregado' : `+${t.stampsChanged}`}
+                          </td>
+                          <td className="py-3 px-4 text-slate-500">{t.staffName}</td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -2742,6 +2861,7 @@ Contacto y Soporte: soporte@markethers.com
                   prev.map(b => (b.id === business.id ? { ...b, ...updated } : b))
                 );
               }}
+              onUpdateMenuItems={handleUpdateMenuItems}
             />
           )}
 
@@ -2758,6 +2878,7 @@ Contacto y Soporte: soporte@markethers.com
                   prev.map(b => (b.id === business.id ? { ...b, ...updated } : b))
                 );
               }}
+              onUpdateMenuItems={handleUpdateMenuItems}
             />
           )}
 

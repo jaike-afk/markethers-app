@@ -61,8 +61,14 @@ export default function CashierScannerPage() {
       if (res.ok && data.customer) {
         setScannedCustomer(data.customer);
       } else {
-        // Fallback for initial demo state if not in server store yet
-        const localFound = INITIAL_CUSTOMERS.find(c => c.qrCodeToken === decodedToken);
+        // Check local storage customers DB before falling back to initial demo
+        let localCusts: typeof INITIAL_CUSTOMERS = [];
+        try {
+          localCusts = JSON.parse(localStorage.getItem('markethers_customers_db') || '[]');
+        } catch {
+          localCusts = [];
+        }
+        const localFound = localCusts.find(c => c.qrCodeToken === decodedToken) || INITIAL_CUSTOMERS.find(c => c.qrCodeToken === decodedToken);
         if (localFound) {
           setScannedCustomer(localFound);
         } else {

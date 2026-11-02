@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { Business, MenuItem } from '@/types';
 import {
@@ -48,6 +48,11 @@ export function MenuManager({
 
   // Menu items state
   const [items, setItems] = useState<MenuItem[]>(initialMenuItems);
+
+  useEffect(() => {
+    setItems(initialMenuItems);
+  }, [initialMenuItems]);
+
   const [searchFilter, setSearchFilter] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 

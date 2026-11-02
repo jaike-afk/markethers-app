@@ -26,6 +26,10 @@ export default function LoginPage() {
         return;
       }
 
+      if (result.user?.businessId && typeof window !== 'undefined') {
+        localStorage.setItem('markethers_active_business_id', result.user.businessId);
+      }
+
       setLoading(false);
       router.push('/app');
     }, 400);
