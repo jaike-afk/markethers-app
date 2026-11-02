@@ -1212,7 +1212,7 @@ Contacto y Soporte: soporte@markethers.com
     if (!newQrName.trim()) return;
 
     const newId = `qr-${Date.now().toString(36)}`;
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://markethers.vercel.app';
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://menubeacon.app';
 
     let targetUrl = `${origin}/${business.slug}?qr=${newId}`;
     if (newQrType === 'menu') {
@@ -4680,13 +4680,15 @@ Contacto y Soporte: soporte@markethers.com
                       <input
                         type="text"
                         readOnly
-                        value={`https://markethers.app/${business.slug}`}
+                        value={typeof window !== 'undefined' ? `${window.location.origin}/${business.slug}` : `https://menubeacon.app/${business.slug}`}
                         className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-700"
                       />
                       <button
                         onClick={() => {
-                          navigator.clipboard.writeText(`https://markethers.app/${business.slug}`);
-                          alert('¡Enlace copiado al portapapeles!');
+                          const url = typeof window !== 'undefined' ? `${window.location.origin}/${business.slug}` : `https://menubeacon.app/${business.slug}`;
+                          navigator.clipboard.writeText(url);
+                          setCopyToast('¡Enlace copiado al portapapeles!');
+                          setTimeout(() => setCopyToast(null), 3000);
                         }}
                         className="px-3 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg"
                       >
@@ -7897,7 +7899,7 @@ Contacto y Soporte: soporte@markethers.com
                   🔗 Trazabilidad & Rastreo en Tiempo Real:
                 </span>
                 <p className="text-[11px] text-indigo-800 leading-relaxed font-mono break-all">
-                  {(typeof window !== 'undefined' ? window.location.origin : 'https://markethers.vercel.app')}/
+                  {(typeof window !== 'undefined' ? window.location.origin : 'https://menubeacon.app')}/
                   {business.slug}?qr=qr-xxx&tab={newQrType === 'loyalty' ? 'card' : newQrType === 'reviews' ? 'info' : 'menu'}
                   {newQrTableNumber ? `&table=${encodeURIComponent(newQrTableNumber)}` : ''}
                 </p>

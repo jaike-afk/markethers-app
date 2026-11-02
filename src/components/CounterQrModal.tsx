@@ -56,7 +56,7 @@ export function CounterQrModal({ business, isOpen, onClose, type = 'counter' }: 
 
   useEffect(() => {
     if (!isOpen) return;
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://markethers.app';
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://menubeacon.app';
     const reviewUrl = business?.googleReviews?.googleReviewUrl;
     const targetUrl = type === 'reviews' && reviewUrl
       ? reviewUrl
