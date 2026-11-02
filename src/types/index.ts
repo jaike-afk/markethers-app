@@ -135,3 +135,21 @@ export interface MerchantClientAccount {
   cardBrand?: string;
   notes?: string;
 }
+
+export interface EmailCampaign {
+  id: string;
+  businessId: string;
+  senderName: string;
+  replyTo: string;
+  subject: string;
+  preheader?: string;
+  body: string;
+  buttonText?: string;
+  buttonUrl?: string;
+  audience: string;
+  recipientsCount: number;
+  recipientEmails: string[];
+  status: 'sent' | 'draft';
+  sentAt: string;
+  templateType: string;
+}

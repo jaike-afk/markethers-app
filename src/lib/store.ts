@@ -1,4 +1,4 @@
-import { Business, Customer, MenuItem, StampTransaction, SaleRecord, MerchantClientAccount } from '@/types';
+import { Business, Customer, MenuItem, StampTransaction, SaleRecord, MerchantClientAccount, EmailCampaign } from '@/types';
 
 export const INITIAL_BUSINESSES: Business[] = [
   {
@@ -768,6 +768,43 @@ export const INITIAL_MERCHANT_CLIENTS: MerchantClientAccount[] = [
     cardLast4: '4242',
     cardBrand: 'Visa',
     notes: 'Prueba gratuita de 14 días activa. Tarjeta verificada.',
+  },
+];
+
+export const INITIAL_EMAIL_CAMPAIGNS: EmailCampaign[] = [
+  {
+    id: 'camp_001',
+    businessId: 'biz_habibi_0',
+    senderName: 'Habibi Bar Cantina',
+    replyTo: 'contacto@habibicantina.com',
+    subject: '¡Jueves de 2x1 en Cantina! 🍹 Tu doble sello te espera',
+    preheader: 'Presenta tu tarjeta Wallet y duplica tus visitas hoy.',
+    body: 'Hola {{nombre}},\n\nEste jueves tenemos noche de coctelería y botanas mexicanas. Visítanos y presenta tu tarjeta en Apple o Google Wallet para recibir doble sello en tu consumo.\n\n¡Estás a solo unos pasos de canjear tu Trago Signature gratis!',
+    buttonText: 'Ver Menú & Tarjeta',
+    buttonUrl: 'https://markethers.app/habibi-bar',
+    audience: 'Todos los Clientes Wallet',
+    recipientsCount: 4,
+    recipientEmails: ['carlos.m@gmail.com', 'sofia.garcia@outlook.com', 'm.fernandez@techcorp.mx', 'd.herrera@agencia.com'],
+    status: 'sent',
+    sentAt: '2026-10-29T18:00:00Z',
+    templateType: 'promo',
+  },
+  {
+    id: 'camp_002',
+    businessId: 'biz_habibi_0',
+    senderName: 'Habibi Bar Cantina',
+    replyTo: 'contacto@habibicantina.com',
+    subject: '¡Te extrañamos en Habibi! 🎁 Tenemos un regalo para ti',
+    preheader: 'Vuelve esta semana y recibe 1 sello de cortesía directo en tu Wallet.',
+    body: 'Hola {{nombre}},\n\nHa pasado un tiempo desde tu última visita y queremos verte de nuevo en la barra. Para celebrar tu regreso, en tu próximo consumo te obsequiamos 1 sello de cortesía directo a tu tarjeta digital.\n\n¡Nos vemos pronto!',
+    buttonText: 'Abrir mi Tarjeta Digital',
+    buttonUrl: 'https://markethers.app/habibi-bar',
+    audience: 'Clientes Inactivos (≥14 días)',
+    recipientsCount: 2,
+    recipientEmails: ['roberto.sanchez@gmail.com', 'valeria.luna@studio.mx'],
+    status: 'sent',
+    sentAt: '2026-10-25T15:30:00Z',
+    templateType: 'reactivation',
   },
 ];
 

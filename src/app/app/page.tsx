@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { INITIAL_BUSINESSES, INITIAL_CUSTOMERS, INITIAL_MENU_ITEMS, INITIAL_TRANSACTIONS, INITIAL_SALES, INITIAL_MERCHANT_CLIENTS } from '@/lib/store';
-import { Business, Customer, MenuItem, StampTransaction, SaleRecord, MerchantClientAccount } from '@/types';
+import { INITIAL_BUSINESSES, INITIAL_CUSTOMERS, INITIAL_MENU_ITEMS, INITIAL_TRANSACTIONS, INITIAL_SALES, INITIAL_MERCHANT_CLIENTS, INITIAL_EMAIL_CAMPAIGNS } from '@/lib/store';
+import { Business, Customer, MenuItem, StampTransaction, SaleRecord, MerchantClientAccount, EmailCampaign } from '@/types';
 import { getCurrentUser, logoutUser, UserAccount, isOwnerUser } from '@/lib/auth';
 import { AppleWalletCard } from '@/components/AppleWalletCard';
 import { CameraScanner } from '@/components/CameraScanner';
@@ -70,6 +70,11 @@ import {
   Clock,
   RefreshCw,
   UserCheck,
+  Mail,
+  Copy,
+  CheckCheck,
+  FileSpreadsheet,
+  SendHorizontal,
 } from 'lucide-react';
 
 export default function MarkethersAppPortal() {
@@ -133,6 +138,29 @@ export default function MarkethersAppPortal() {
   const [newMerchantAmountDue, setNewMerchantAmountDue] = useState('0');
   const [newMerchantTotalPaid, setNewMerchantTotalPaid] = useState('0');
   const [newMerchantNotes, setNewMerchantNotes] = useState('');
+
+  // Copy to Clipboard (Multi-platform Paste) State
+  const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
+  const [copyModalContext, setCopyModalContext] = useState<'customers' | 'merchants'>('customers');
+  const [copyModalFormat, setCopyModalFormat] = useState<'table' | 'emails' | 'phones'>('table');
+  const [copyToast, setCopyToast] = useState<string | null>(null);
+
+  // Email Marketing Campaign System State
+  const [emailCampaigns, setEmailCampaigns] = useState<EmailCampaign[]>(INITIAL_EMAIL_CAMPAIGNS);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [emailContext, setEmailContext] = useState<'customers' | 'merchants'>('customers');
+  const [emailAudienceFilter, setEmailAudienceFilter] = useState<string>('all');
+  const [emailSelectedTemplate, setEmailSelectedTemplate] = useState<string>('promo');
+  const [emailSubject, setEmailSubject] = useState<string>('');
+  const [emailPreheader, setEmailPreheader] = useState<string>('');
+  const [emailBody, setEmailBody] = useState<string>('');
+  const [emailButtonText, setEmailButtonText] = useState<string>('Ver Menú & Tarjeta Digital');
+  const [emailButtonUrl, setEmailButtonUrl] = useState<string>('');
+  const [emailSenderName, setEmailSenderName] = useState<string>('');
+  const [emailSendingState, setEmailSendingState] = useState<'idle' | 'sending' | 'success'>('idle');
+  const [emailSendingProgress, setEmailSendingProgress] = useState<number>(0);
+  const [emailDirectRecipient, setEmailDirectRecipient] = useState<{ name: string; email: string } | null>(null);
+  const [isEmailHistoryModalOpen, setIsEmailHistoryModalOpen] = useState(false);
 
   // Customer, Sales & Menu Database State (persisted in localStorage)
   const [allCustomers, setAllCustomers] = useState<Customer[]>(INITIAL_CUSTOMERS);
@@ -398,12 +426,271 @@ export default function MarkethersAppPortal() {
         localStorage.setItem('markethers_merchant_clients_db', JSON.stringify(INITIAL_MERCHANT_CLIENTS));
       }
 
+      // Load or initialize Email Campaigns DB
+      const storedCampaigns = localStorage.getItem('markethers_email_campaigns_db');
+      if (storedCampaigns) {
+        try {
+          setEmailCampaigns(JSON.parse(storedCampaigns));
+        } catch {
+          setEmailCampaigns(INITIAL_EMAIL_CAMPAIGNS);
+        }
+      } else {
+        localStorage.setItem('markethers_email_campaigns_db', JSON.stringify(INITIAL_EMAIL_CAMPAIGNS));
+      }
+
       setCurrentTimestamp(Date.now());
     } catch (e) {
       console.error(e);
       setAuthChecking(false);
     }
   }, [router]);
+
+  const handleCopyFormattedList = (context: 'customers' | 'merchants', format: 'table' | 'emails' | 'phones') => {
+    let textToCopy = '';
+    let count = 0;
+
+    if (context === 'customers') {
+      if (format === 'table') {
+        const headers = ['Nombre', 'Email', 'Teléfono', 'Visitas', 'Gasto Total ($)', 'Sellos Actuales', 'Nivel', 'Wallet Token', 'Notas'];
+        const rows = customers.map(c => [
+          c.name,
+          c.email || '',
+          c.phone,
+          c.totalVisits,
+          c.totalSpent || 0,
+          c.currentStamps,
+          (c.tier || 'nuevo').toUpperCase(),
+          c.qrCodeToken,
+          c.notes || '',
+        ].join('\t'));
+        textToCopy = [headers.join('\t'), ...rows].join('\n');
+        count = customers.length;
+      } else if (format === 'emails') {
+        const validEmails = customers.map(c => c.email?.trim()).filter(Boolean) as string[];
+        textToCopy = validEmails.join(', ');
+        count = validEmails.length;
+      } else {
+        const phones = customers.map(c => c.phone.replace(/[^\d+]/g, '')).filter(Boolean);
+        textToCopy = phones.join(', ');
+        count = phones.length;
+      }
+    } else {
+      // merchants
+      if (format === 'table') {
+        const headers = ['Negocio', 'Propietario', 'Email', 'Teléfono', 'Ciudad', 'Categoría', 'Estado', 'Plan', 'Lo Que Pagan ($/mes)', 'Lo Que Pagaron ($)', 'Lo Que Deben ($)', 'Próxima Facturación', 'Notas'];
+        const rows = merchantClients.map(m => [
+          m.businessName,
+          m.ownerName,
+          m.email,
+          m.phone,
+          m.city,
+          m.category,
+          m.status,
+          m.planName,
+          m.monthlyPrice,
+          m.totalPaid,
+          m.amountDue,
+          m.nextBillingDate,
+          m.notes || '',
+        ].join('\t'));
+        textToCopy = [headers.join('\t'), ...rows].join('\n');
+        count = merchantClients.length;
+      } else if (format === 'emails') {
+        const validEmails = merchantClients.map(m => m.email.trim()).filter(Boolean);
+        textToCopy = validEmails.join(', ');
+        count = validEmails.length;
+      } else {
+        const phones = merchantClients.map(m => m.phone.replace(/[^\d+]/g, '')).filter(Boolean);
+        textToCopy = phones.join(', ');
+        count = phones.length;
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      navigator.clipboard.writeText(textToCopy);
+      const formatLabels = {
+        table: 'formato Tabla (Excel / Sheets / CRM)',
+        emails: 'solo Correos Electrónicos (Mailchimp / Klaviyo / Gmail)',
+        phones: 'solo Teléfonos / WhatsApp',
+      };
+      setCopyToast(`¡${count} contactos copiados en ${formatLabels[format]}! Abre tu otra plataforma y presiona Pegar (Ctrl+V / Cmd+V).`);
+      setTimeout(() => setCopyToast(null), 5000);
+      setIsCopyModalOpen(false);
+    }
+  };
+
+  const openEmailCampaignModal = (
+    context: 'customers' | 'merchants',
+    singleRecipient?: { name: string; email: string }
+  ) => {
+    setEmailContext(context);
+    setEmailSendingState('idle');
+    setEmailSendingProgress(0);
+
+    if (singleRecipient) {
+      setEmailDirectRecipient(singleRecipient);
+      setEmailAudienceFilter('single');
+      setEmailSenderName(business.name);
+      setEmailSubject(`Mensaje de ${business.name} para ${singleRecipient.name}`);
+      setEmailPreheader('Tienes un mensaje directo de nuestro equipo.');
+      setEmailBody(`Hola ${singleRecipient.name},\n\nNos ponemos en contacto contigo directamente desde ${business.name}.\n\n¿En qué podemos apoyarte hoy?`);
+      setEmailButtonText('Ver Menú & Tarjeta');
+      setEmailButtonUrl(typeof window !== 'undefined' ? `${window.location.origin}/${business.slug}` : 'https://markethers.app');
+    } else {
+      setEmailDirectRecipient(null);
+      setEmailAudienceFilter('all');
+      if (context === 'customers') {
+        setEmailSenderName(business.name);
+        setEmailSelectedTemplate('promo');
+        setEmailSubject(`¡Fin de semana especial en ${business.name}! 🍹 Doble sello en tu visita`);
+        setEmailPreheader(`Presenta tu tarjeta en Apple/Google Wallet y acumula más rápido tu ${business.loyaltyConfig.rewardTitle}.`);
+        setEmailBody(`Hola {{nombre}},\n\n¡Queremos consentirte este fin de semana en ${business.name}!\n\nAl visitarnos y presentar tu tarjeta de fidelización en tu celular, te abonamos doble sello por tu consumo para que alcances antes tu recompensa:\n\n✨ ${business.loyaltyConfig.rewardTitle} ✨\n\n¡Te esperamos con el mejor servicio y ambiente!`);
+        setEmailButtonText('Ver Menú & Abrir Tarjeta');
+        setEmailButtonUrl(typeof window !== 'undefined' ? `${window.location.origin}/${business.slug}` : 'https://markethers.app');
+      } else {
+        setEmailSenderName('Markethers Management');
+        setEmailSelectedTemplate('update');
+        setEmailSubject('Nuevas herramientas activadas en tu plataforma Markethers 🚀');
+        setEmailPreheader('Descubre el nuevo sistema de campañas de correo y exportación.');
+        setEmailBody(`Hola {{nombre}},\n\nTe saludamos del equipo de Markethers. Hemos liberado una actualización importante en tu panel de control:\n\n1. Sistema integrado de Campañas de Email para tus comensales.\n2. Exportación directa compatible con Mailchimp, Excel y Google Sheets.\n3. Métricas en vivo y modo soporte técnico.\n\nPuedes entrar a tu cuenta para probarlas hoy mismo.`);
+        setEmailButtonText('Acceder a mi Panel');
+        setEmailButtonUrl('https://markethers.app/app');
+      }
+    }
+
+    setIsEmailModalOpen(true);
+  };
+
+  const handleApplyEmailTemplate = (templateId: string) => {
+    setEmailSelectedTemplate(templateId);
+    if (emailContext === 'customers') {
+      if (templateId === 'promo') {
+        setEmailSubject(`¡Fin de semana especial en ${business.name}! 🍹 Doble sello en tu visita`);
+        setEmailPreheader(`Presenta tu tarjeta Wallet y duplica tus beneficios.`);
+        setEmailBody(`Hola {{nombre}},\n\n¡Queremos consentirte este fin de semana en ${business.name}!\n\nPresenta tu tarjeta en Apple o Google Wallet al pagar tu consumo y recibe doble sello para estar más cerca de tu premio:\n\n✨ ${business.loyaltyConfig.rewardTitle} ✨\n\n¡Te esperamos con la mesa lista!`);
+        setEmailButtonText('Ver Menú & Tarjeta');
+      } else if (templateId === 'menu') {
+        setEmailSubject(`Descubre los nuevos platillos y bebidas en ${business.name} 🍽️`);
+        setEmailPreheader(`Actualizamos nuestra carta con nuevas recetas artesanales.`);
+        setEmailBody(`Hola {{nombre}},\n\nTenemos grandes novedades gastronómicas en ${business.name}. Acabamos de incorporar nuevos platillos y especialidades elaboradas con ingredientes frescos.\n\nVen a probar nuestras creaciones de la temporada y acumula sellos en tu pase digital.`);
+        setEmailButtonText('Explorar Nuevo Menú');
+      } else if (templateId === 'reactivation') {
+        setEmailSubject(`¡Hola {{nombre}}! Hace tiempo que no nos vemos en ${business.name} 🎁`);
+        setEmailPreheader(`Te regalamos 1 sello de cortesía en tu próxima visita.`);
+        setEmailBody(`Hola {{nombre}},\n\n¡Te hemos echado de menos en ${business.name}!\n\nPara celebrar tu regreso, en tu próxima visita te obsequiamos 1 sello de cortesía directo en tu tarjeta digital en Apple o Google Wallet.\n\n¡Vuelve a visitarnos pronto!`);
+        setEmailButtonText('Abrir mi Tarjeta Digital');
+      } else if (templateId === 'reviews') {
+        setEmailSubject(`¿Cómo fue tu experiencia en ${business.name}? ⭐`);
+        setEmailPreheader(`Tu opinión nos ayuda a mejorar y te recompensa.`);
+        setEmailBody(`Hola {{nombre}},\n\nMuchas gracias por visitarnos en ${business.name}. Tu experiencia es lo más importante para todo nuestro equipo.\n\n¿Nos regalarías 1 minuto de tu tiempo dejándonos tu reseña en Google? Nos ayudaría muchísimo y te regalamos un sello adicional en tu próxima visita.`);
+        setEmailButtonText('Dejar Reseña en Google');
+        setEmailButtonUrl(business.googleReviews.googleReviewUrl);
+      } else {
+        setEmailSubject(`Mensaje de ${business.name}`);
+        setEmailPreheader('Novedades para ti.');
+        setEmailBody(`Hola {{nombre}},\n\nTe escribimos desde ${business.name} para compartirte novedades...`);
+        setEmailButtonText('Ver Detalles');
+      }
+    } else {
+      // merchants context
+      if (templateId === 'update') {
+        setEmailSubject('Novedades y mejoras activadas en tu cuenta de Markethers 🚀');
+        setEmailPreheader('Herramientas diseñadas para aumentar la lealtad y el ticket promedio.');
+        setEmailBody(`Estimado(a) {{nombre}},\n\nTe informamos que tu plataforma Markethers cuenta con nuevas herramientas:\n\n- Campañas de email marketing masivo para comensales.\n- Exportación compatible con Excel, Google Sheets y Mailchimp.\n- Tarjetas de Apple & Google Wallet optimizadas.\n\nRevisa tu panel de administración para comenzar a utilizarlas.`);
+        setEmailButtonText('Entrar a mi Panel');
+      } else if (templateId === 'billing') {
+        setEmailSubject(`Estado de Cuenta y Notificación de Facturación - {{negocio}}`);
+        setEmailPreheader('Resumen de tu suscripción en Markethers.');
+        setEmailBody(`Hola {{nombre}},\n\nTe saludamos del área administrativa de Markethers. Te recordamos el estado de tu cuenta correspondiente a {{negocio}}:\n\n- Cuota mensual programada.\n- Si requieres comprobante fiscal o asistencia para conciliar tu saldo, responde a este correo y nuestro equipo te atenderá con gusto.`);
+        setEmailButtonText('Ver Estado de Cuenta');
+      } else {
+        setEmailSubject(`Aviso importante para {{negocio}}`);
+        setEmailPreheader('Comunicado de Markethers.');
+        setEmailBody(`Hola {{nombre}},\n\nNos comunicamos respecto a tu cuenta en {{negocio}}...`);
+        setEmailButtonText('Ir al Panel');
+      }
+    }
+  };
+
+  const getRecipientEmailsList = (): { emails: string[]; count: number } => {
+    if (emailDirectRecipient) {
+      return { emails: [emailDirectRecipient.email], count: 1 };
+    }
+    if (emailContext === 'customers') {
+      let filtered = customers;
+      if (emailAudienceFilter === 'vip') {
+        filtered = customers.filter(c => c.tier === 'vip' || (c.totalSpent || 0) > 500);
+      } else if (emailAudienceFilter === 'frecuente') {
+        filtered = customers.filter(c => c.totalVisits >= 2);
+      } else if (emailAudienceFilter === 'inactivos') {
+        filtered = customers.filter(c => c.totalVisits <= 1);
+      }
+      const valid = filtered.map(c => c.email?.trim()).filter(Boolean) as string[];
+      return { emails: valid, count: valid.length };
+    } else {
+      let filtered = merchantClients;
+      if (emailAudienceFilter === 'active') {
+        filtered = merchantClients.filter(m => m.status === 'active');
+      } else if (emailAudienceFilter === 'trialing') {
+        filtered = merchantClients.filter(m => m.status === 'trialing');
+      } else if (emailAudienceFilter === 'past_due') {
+        filtered = merchantClients.filter(m => m.status === 'past_due');
+      }
+      const valid = filtered.map(m => m.email.trim()).filter(Boolean);
+      return { emails: valid, count: valid.length };
+    }
+  };
+
+  const handleSendEmailCampaign = (e: React.FormEvent) => {
+    e.preventDefault();
+    const { emails, count } = getRecipientEmailsList();
+    if (count === 0) {
+      alert('No hay contactos con correo electrónico en la audiencia seleccionada.');
+      return;
+    }
+
+    setEmailSendingState('sending');
+    setEmailSendingProgress(20);
+
+    setTimeout(() => {
+      setEmailSendingProgress(60);
+      setTimeout(() => {
+        setEmailSendingProgress(100);
+        setEmailSendingState('success');
+
+        const newCampaign: EmailCampaign = {
+          id: `camp_${Date.now()}`,
+          businessId: emailContext === 'customers' ? business.id : 'admin_master',
+          senderName: emailSenderName || business.name,
+          replyTo: emailContext === 'customers' ? (business.phone ? `contacto@${business.slug}.com` : 'hola@markethers.app') : 'administracion@markethers.app',
+          subject: emailSubject,
+          preheader: emailPreheader,
+          body: emailBody,
+          buttonText: emailButtonText,
+          buttonUrl: emailButtonUrl,
+          audience: emailDirectRecipient ? `Directo a ${emailDirectRecipient.name}` : emailAudienceFilter,
+          recipientsCount: count,
+          recipientEmails: emails,
+          status: 'sent',
+          sentAt: new Date().toISOString(),
+          templateType: emailSelectedTemplate,
+        };
+
+        const updatedCampaigns = [newCampaign, ...emailCampaigns];
+        setEmailCampaigns(updatedCampaigns);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('markethers_email_campaigns_db', JSON.stringify(updatedCampaigns));
+        }
+
+        setTimeout(() => {
+          setIsEmailModalOpen(false);
+          setEmailSendingState('idle');
+          setCopyToast(`¡Campaña de email enviada exitosamente a ${count} destinatario(s)! 🚀`);
+          setTimeout(() => setCopyToast(null), 5000);
+        }, 1200);
+      }, 600);
+    }, 500);
+  };
 
   const saveMerchantClientsList = (updated: MerchantClientAccount[]) => {
     setMerchantClients(updated);
@@ -1137,7 +1424,7 @@ Contacto y Soporte: soporte@markethers.com
               >
                 <div className="flex items-center gap-2.5">
                   <Building className="w-4 h-4 stroke-[2.5]" />
-                  <span>Cartera de Clientes (SaaS)</span>
+                  <span>Cartera de Clientes</span>
                 </div>
                 <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${
                   activeSection === 'comercios' ? 'bg-slate-950 text-amber-300' : 'bg-amber-400/20 text-amber-300'
@@ -1512,7 +1799,7 @@ Contacto y Soporte: soporte@markethers.com
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-black text-slate-900 tracking-tight">
                 {activeSection === 'comercios'
-                  ? 'Cartera de Clientes SaaS'
+                  ? 'Cartera de Clientes'
                   : isOwner
                   ? 'Dashboard Ejecutivo Dueño'
                   : 'Panel de Control'}
@@ -1606,7 +1893,7 @@ Contacto y Soporte: soporte@markethers.com
                 onClick={() => setActiveSection('comercios')}
                 className="px-3.5 py-1.5 bg-black/20 hover:bg-black/30 text-slate-950 text-xs font-bold rounded-xl transition-all"
               >
-                Ver Cartera SaaS
+                Ver Cartera de Clientes
               </button>
               <button
                 onClick={handleExitImpersonation}
@@ -1789,14 +2076,14 @@ Contacto y Soporte: soporte@markethers.com
                     <span>Registrar Venta / Cobro</span>
                   </button>
 
-                  {/* Action: Cartera de Clientes SaaS */}
+                  {/* Action: Cartera de Clientes */}
                   <button
                     type="button"
                     onClick={() => setActiveSection('comercios')}
                     className="flex-1 sm:flex-none px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm cursor-pointer transition-all"
                   >
                     <Building className="w-3.5 h-3.5" />
-                    <span>Cartera SaaS ({merchantClients.length})</span>
+                    <span>Cartera de Clientes ({merchantClients.length})</span>
                   </button>
 
                   {/* Action: Nuevo Cliente */}
@@ -2990,23 +3277,44 @@ Contacto y Soporte: soporte@markethers.com
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <button
                       type="button"
                       onClick={() => setIsNewCustomerModalOpen(true)}
-                      className="flex-1 sm:flex-none px-4 py-2.5 bg-[#22c55e] hover:bg-emerald-600 text-black font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 cursor-pointer"
+                      className="flex-1 sm:flex-none px-4 py-2.5 bg-[#22c55e] hover:bg-emerald-600 text-black font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 cursor-pointer transition-all hover:scale-[1.02]"
                     >
                       <Plus className="w-4 h-4 stroke-[3]" />
                       <span>+ Nuevo Cliente</span>
                     </button>
                     <button
                       type="button"
+                      onClick={() => {
+                        setCopyModalContext('customers');
+                        setIsCopyModalOpen(true);
+                      }}
+                      className="px-3.5 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-800 font-bold text-xs rounded-xl flex items-center gap-1.5 border border-blue-200 transition-colors shadow-sm"
+                      title="Copiar lista de contactos para pegar en Excel, Google Sheets, Mailchimp, Klaviyo, etc."
+                    >
+                      <Copy className="w-4 h-4 text-blue-600" />
+                      <span>Copiar para Pegar</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openEmailCampaignModal('customers')}
+                      className="px-3.5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl flex items-center gap-1.5 shadow-md shadow-indigo-600/20 transition-all hover:scale-[1.02]"
+                      title="Crear y enviar campaña de email marketing a comensales"
+                    >
+                      <Mail className="w-4 h-4 text-white" />
+                      <span>Campaña Email</span>
+                    </button>
+                    <button
+                      type="button"
                       onClick={handleExportCSV}
-                      className="px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer"
+                      className="px-3 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
                       title="Descargar base de datos en CSV / Excel"
                     >
                       <Download className="w-4 h-4 text-emerald-400" />
-                      <span>Exportar CSV</span>
+                      <span>CSV</span>
                     </button>
                   </div>
                 </div>
@@ -3250,6 +3558,17 @@ Contacto y Soporte: soporte@markethers.com
                                     >
                                       Ver Ficha
                                     </button>
+
+                                    {c.email && (
+                                      <button
+                                        type="button"
+                                        onClick={() => openEmailCampaignModal('customers', { name: c.name, email: c.email! })}
+                                        className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold rounded-lg text-xs transition-colors"
+                                        title={`Enviar correo directo a ${c.email}`}
+                                      >
+                                        <Mail className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
 
                                     <a
                                       href={`https://wa.me/${c.phone.replace(/\D/g, '')}?text=¡Hola ${c.name}! Te escribimos de ${business.name}.`}
@@ -4157,7 +4476,7 @@ Contacto y Soporte: soporte@markethers.com
                     </div>
                     <div>
                       <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
-                        <span>Cartera de Clientes & Suscripciones SaaS</span>
+                        <span>Cartera de Clientes & Suscripciones</span>
                         <span className="text-[10px] bg-amber-100 text-amber-900 font-extrabold px-2 py-0.5 rounded-full uppercase">
                           Consola Dueño
                         </span>
@@ -4170,6 +4489,27 @@ Contacto y Soporte: soporte@markethers.com
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                  <button
+                    onClick={() => {
+                      setCopyModalContext('merchants');
+                      setIsCopyModalOpen(true);
+                    }}
+                    className="flex-1 sm:flex-none px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 border border-amber-200 transition-all shadow-sm"
+                    title="Copiar lista de comercios para pegar en Excel, Google Sheets, Mailchimp, etc."
+                  >
+                    <Copy className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Copiar para Pegar</span>
+                  </button>
+
+                  <button
+                    onClick={() => openEmailCampaignModal('merchants')}
+                    className="flex-1 sm:flex-none px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/20 transition-all hover:scale-[1.02]"
+                    title="Enviar comunicado o estado de cuenta por correo a los comercios"
+                  >
+                    <Mail className="w-3.5 h-3.5 text-white" />
+                    <span>Campaña Email</span>
+                  </button>
+
                   <button
                     onClick={handleExportMerchantsCSV}
                     className="flex-1 sm:flex-none px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all"
@@ -4545,6 +4885,16 @@ Contacto y Soporte: soporte@markethers.com
                                   >
                                     <Wrench className="w-3 h-3 text-slate-500" />
                                     <span>Ajustar</span>
+                                  </button>
+
+                                  {/* Botón Correo Directo */}
+                                  <button
+                                    type="button"
+                                    onClick={() => openEmailCampaignModal('merchants', { name: client.ownerName, email: client.email })}
+                                    className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl transition-colors"
+                                    title={`Enviar correo directo a ${client.email}`}
+                                  >
+                                    <Mail className="w-4 h-4" />
                                   </button>
 
                                   {/* Botón WhatsApp Directo */}
@@ -5853,6 +6203,661 @@ Contacto y Soporte: soporte@markethers.com
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* FLOATING COPY / CAMPAIGN TOAST */}
+      {copyToast && (
+        <div className="fixed top-5 right-5 z-50 max-w-md bg-slate-950 text-white p-4 rounded-2xl shadow-2xl border border-emerald-500/40 flex items-start gap-3 animate-in fade-in slide-in-from-top-3">
+          <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+            <CheckCheck className="w-5 h-5 text-emerald-400" />
+          </div>
+          <div className="flex-1 text-xs">
+            <h5 className="font-extrabold text-sm text-emerald-400">Acción completada</h5>
+            <p className="text-slate-300 mt-0.5 leading-relaxed">{copyToast}</p>
+          </div>
+          <button
+            onClick={() => setCopyToast(null)}
+            className="text-slate-400 hover:text-white p-1 rounded-lg"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* MODAL: COPIAR LISTA PARA OTRAS PLATAFORMAS (EXCEL, MAILCHIMP, ETC) */}
+      {isCopyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 text-slate-900 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setIsCopyModalOpen(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 rounded-full"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2.5 mb-1">
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                <Copy className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-black text-lg text-slate-900">
+                  Copiar Lista para Otras Plataformas
+                </h3>
+                <span className="text-xs text-slate-500 block">
+                  Exporta y pega en 1 clic en Excel, Google Sheets, Mailchimp, Klaviyo, Brevo o Notion.
+                </span>
+              </div>
+            </div>
+
+            {/* Target Audience Note */}
+            <div className="my-4 p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 flex items-center justify-between">
+              <div>
+                <span className="font-bold text-slate-900 block">
+                  {copyModalContext === 'customers' ? `Comensales de ${business.name}` : 'Cartera de Comercios Afiliados'}
+                </span>
+                <span className="text-[11px] text-slate-500">
+                  {copyModalContext === 'customers'
+                    ? `${customers.length} contactos registrados en base de datos`
+                    : `${merchantClients.length} comercios en cartera`}
+                </span>
+              </div>
+              <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-black uppercase">
+                Listo para Pegar
+              </span>
+            </div>
+
+            {/* Format Options */}
+            <div className="space-y-2.5 my-4">
+              <button
+                type="button"
+                onClick={() => setCopyModalFormat('table')}
+                className={`w-full p-3.5 rounded-2xl border-2 text-left transition-all flex items-start gap-3 ${
+                  copyModalFormat === 'table'
+                    ? 'border-blue-600 bg-blue-50/40 shadow-sm'
+                    : 'border-slate-200 hover:border-slate-300 bg-white'
+                }`}
+              >
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                  copyModalFormat === 'table' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
+                }`}>
+                  <FileSpreadsheet className="w-4 h-4" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <h5 className="font-bold text-xs text-slate-900">
+                      Formato Tabla (Excel, Google Sheets, Notion, Airtable)
+                    </h5>
+                    <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded">
+                      Recomendado
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                    Separado por tabulaciones. Al presionar <strong>Pegar (Ctrl+V / Cmd+V)</strong> en Excel o Google Sheets, cada dato se ordena en su propia celda automáticamente.
+                  </p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCopyModalFormat('emails')}
+                className={`w-full p-3.5 rounded-2xl border-2 text-left transition-all flex items-start gap-3 ${
+                  copyModalFormat === 'emails'
+                    ? 'border-blue-600 bg-blue-50/40 shadow-sm'
+                    : 'border-slate-200 hover:border-slate-300 bg-white'
+                }`}
+              >
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                  copyModalFormat === 'emails' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
+                }`}>
+                  <Mail className="w-4 h-4" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <h5 className="font-bold text-xs text-slate-900">
+                      Solo Correos Electrónicos (Mailchimp, Klaviyo, Brevo, Gmail)
+                    </h5>
+                    <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded">
+                      Email Mkt
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                    Lista separada por comas (ej. <code>juan@email.com, maria@email.com</code>). Ideal para pegar directo en CCO (Bcc) de Gmail o en importadores de audiencia.
+                  </p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCopyModalFormat('phones')}
+                className={`w-full p-3.5 rounded-2xl border-2 text-left transition-all flex items-start gap-3 ${
+                  copyModalFormat === 'phones'
+                    ? 'border-blue-600 bg-blue-50/40 shadow-sm'
+                    : 'border-slate-200 hover:border-slate-300 bg-white'
+                }`}
+              >
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                  copyModalFormat === 'phones' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
+                }`}>
+                  <Phone className="w-4 h-4" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <h5 className="font-bold text-xs text-slate-900">
+                      Solo Teléfonos & WhatsApp
+                    </h5>
+                    <span className="text-[10px] font-bold bg-purple-100 text-purple-800 px-1.5 py-0.2 rounded">
+                      SMS / WhatsApp
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                    Números limpios para campañas de WhatsApp masivo o difusiones SMS.
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            {/* Quick preview */}
+            <div className="bg-slate-900 text-slate-200 rounded-xl p-3 font-mono text-[11px] overflow-x-auto max-h-24 scrollbar-none mb-5">
+              <span className="text-[9px] uppercase tracking-wider text-slate-500 block mb-1">Vista previa:</span>
+              {copyModalContext === 'customers' ? (
+                copyModalFormat === 'emails' ? (
+                  customers.map(c => c.email).filter(Boolean).slice(0, 3).join(', ') + '...'
+                ) : copyModalFormat === 'phones' ? (
+                  customers.map(c => c.phone).slice(0, 3).join(', ') + '...'
+                ) : (
+                  `Nombre\tEmail\tTeléfono\tVisitas...\n${customers.slice(0, 2).map(c => `${c.name}\t${c.email || ''}\t${c.phone}`).join('\n')}...`
+                )
+              ) : (
+                copyModalFormat === 'emails' ? (
+                  merchantClients.map(m => m.email).slice(0, 3).join(', ') + '...'
+                ) : copyModalFormat === 'phones' ? (
+                  merchantClients.map(m => m.phone).slice(0, 3).join(', ') + '...'
+                ) : (
+                  `Negocio\tDueño\tEmail\tTeléfono...\n${merchantClients.slice(0, 2).map(m => `${m.businessName}\t${m.ownerName}\t${m.email}`).join('\n')}...`
+                )
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setIsCopyModalOpen(false)}
+                className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl"
+              >
+                Cerrar
+              </button>
+              <button
+                type="button"
+                onClick={() => handleCopyFormattedList(copyModalContext, copyModalFormat)}
+                className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl shadow-md flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
+              >
+                <Copy className="w-4 h-4" />
+                <span>Copiar al Portapapeles (Cmd+C / Ctrl+C)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: SISTEMA DE CAMPAÑAS DE EMAIL MARKETING */}
+      {isEmailModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-5xl w-full text-slate-900 shadow-2xl relative max-h-[92vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold shadow-md shadow-indigo-600/20">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-black text-base sm:text-lg text-slate-900">
+                      Sistema de Campañas de Email Marketing
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-900 text-[10px] font-black uppercase">
+                      {emailContext === 'customers' ? business.name : 'Consola Manager'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Diseña y envía correos con diseño profesional a tus comensales y contactos registrados.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEmailHistoryModalOpen(true)}
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors"
+                >
+                  <History className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Historial ({emailCampaigns.length})</span>
+                </button>
+                <button
+                  onClick={() => setIsEmailModalOpen(false)}
+                  className="p-2 text-slate-400 hover:text-slate-700 rounded-full"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body: 2 Columns */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 flex-1 overflow-y-auto">
+              {/* Left Column: Editor & Controls (7 cols) */}
+              <div className="lg:col-span-7 p-4 sm:p-6 space-y-4 border-r border-slate-100">
+                {/* 1. Audiencia */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider text-[10px]">
+                      1. Audiencia / Destinatarios
+                    </label>
+                    <span className="text-[11px] font-extrabold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                      {getRecipientEmailsList().count} contactos con email
+                    </span>
+                  </div>
+
+                  {emailDirectRecipient ? (
+                    <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs flex items-center justify-between">
+                      <div>
+                        <span className="font-bold text-slate-900 block">Envío Individual Directo:</span>
+                        <span className="text-slate-600">{emailDirectRecipient.name} ({emailDirectRecipient.email})</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setEmailDirectRecipient(null)}
+                        className="text-xs font-bold text-amber-900 underline"
+                      >
+                        Cambiar a Masivo
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      value={emailAudienceFilter}
+                      onChange={e => setEmailAudienceFilter(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    >
+                      {emailContext === 'customers' ? (
+                        <>
+                          <option value="all">👥 Todos los comensales ({customers.filter(c => c.email).length} con email)</option>
+                          <option value="vip">⭐ Clientes VIP / Alto Consumo ({customers.filter(c => (c.tier === 'vip' || (c.totalSpent || 0) > 500) && c.email).length})</option>
+                          <option value="frecuente">🔁 Clientes Recurrentes ≥2 Visitas ({customers.filter(c => c.totalVisits >= 2 && c.email).length})</option>
+                          <option value="inactivos">⏰ Clientes Inactivos (Reactivación) ({customers.filter(c => c.totalVisits <= 1 && c.email).length})</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="all">🏢 Todos los comercios ({merchantClients.length} afiliados)</option>
+                          <option value="active">🟢 Comercios Activos al Día ({merchantClients.filter(m => m.status === 'active').length})</option>
+                          <option value="trialing">🔵 Comercios en Prueba 14d ({merchantClients.filter(m => m.status === 'trialing').length})</option>
+                          <option value="past_due">🔴 Comercios con Deuda / Mora ({merchantClients.filter(m => m.status === 'past_due').length})</option>
+                        </>
+                      )}
+                    </select>
+                  )}
+                </div>
+
+                {/* 2. Plantillas Rápidas */}
+                <div>
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider text-[10px] block mb-1.5">
+                    2. Cargar Plantilla Pre-diseñada
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {emailContext === 'customers' ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyEmailTemplate('promo')}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                            emailSelectedTemplate === 'promo' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                          }`}
+                        >
+                          🎁 Promoción 2x1
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyEmailTemplate('menu')}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                            emailSelectedTemplate === 'menu' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                          }`}
+                        >
+                          🍽️ Nuevo Menú
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyEmailTemplate('reactivation')}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                            emailSelectedTemplate === 'reactivation' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                          }`}
+                        >
+                          ⏰ Te Extrañamos (+1 Sello)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyEmailTemplate('reviews')}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                            emailSelectedTemplate === 'reviews' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                          }`}
+                        >
+                          ⭐ Reseña Google
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyEmailTemplate('update')}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                            emailSelectedTemplate === 'update' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                          }`}
+                        >
+                          🚀 Nuevas Funciones
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyEmailTemplate('billing')}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                            emailSelectedTemplate === 'billing' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                          }`}
+                        >
+                          🧾 Estado de Cuenta
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. Nombre del Remitente & Asunto */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      Nombre del Remitente
+                    </label>
+                    <input
+                      type="text"
+                      value={emailSenderName}
+                      onChange={e => setEmailSenderName(e.target.value)}
+                      placeholder={business.name}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 outline-none font-medium"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      Texto Pre-encabezado
+                    </label>
+                    <input
+                      type="text"
+                      value={emailPreheader}
+                      onChange={e => setEmailPreheader(e.target.value)}
+                      placeholder="Vista previa en la bandeja de entrada..."
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-slate-700">
+                      Asunto del Correo *
+                    </label>
+                    <div className="flex items-center gap-1 text-[10px] text-slate-400">
+                      <span>Insertar:</span>
+                      <button
+                        type="button"
+                        onClick={() => setEmailSubject(prev => prev + ' {{nombre}}')}
+                        className="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 rounded text-slate-700 font-mono font-bold"
+                      >
+                        &#123;&#123;nombre&#125;&#125;
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEmailSubject(prev => prev + ' {{negocio}}')}
+                        className="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 rounded text-slate-700 font-mono font-bold"
+                      >
+                        &#123;&#123;negocio&#125;&#125;
+                      </button>
+                    </div>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={emailSubject}
+                    onChange={e => setEmailSubject(e.target.value)}
+                    placeholder="ej. ¡Fin de semana especial con 2x1!"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none"
+                  />
+                </div>
+
+                {/* 4. Cuerpo del Correo */}
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Cuerpo del Mensaje (Mensaje Principal) *
+                  </label>
+                  <textarea
+                    rows={5}
+                    required
+                    value={emailBody}
+                    onChange={e => setEmailBody(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none resize-none leading-relaxed font-sans"
+                    placeholder="Escribe el mensaje de tu correo..."
+                  />
+                </div>
+
+                {/* 5. Botón de Llamado a la Acción (CTA) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      Texto del Botón (CTA)
+                    </label>
+                    <input
+                      type="text"
+                      value={emailButtonText}
+                      onChange={e => setEmailButtonText(e.target.value)}
+                      placeholder="Ver Menú Digital"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 outline-none font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      Enlace de Destino
+                    </label>
+                    <input
+                      type="text"
+                      value={emailButtonUrl}
+                      onChange={e => setEmailButtonUrl(e.target.value)}
+                      placeholder="https://..."
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 outline-none font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Visual Email Preview (5 cols) */}
+              <div className="lg:col-span-5 p-4 sm:p-6 bg-slate-100/70 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
+                    <span className="font-extrabold uppercase tracking-wider text-[10px]">
+                      Vista Previa en Tiempo Real
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono">Gmail / Apple Mail</span>
+                  </div>
+
+                  {/* Mock Email Client Container */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden text-xs">
+                    {/* Fake Mail Client Header */}
+                    <div className="bg-slate-50 px-3.5 py-2 border-b border-slate-200 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-rose-400" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-mono">Inbox Preview</span>
+                    </div>
+
+                    <div className="p-3.5 border-b border-slate-100 bg-white">
+                      <div className="text-[11px] text-slate-500">
+                        <strong>De:</strong> {emailSenderName || business.name} &lt;hola@markethers.app&gt;
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        <strong>Para:</strong> {emailDirectRecipient ? emailDirectRecipient.email : `carlos.mendoza@email.com (+ ${Math.max(0, getRecipientEmailsList().count - 1)} en CCO)`}
+                      </div>
+                      <div className="text-xs font-bold text-slate-900 mt-1.5 truncate">
+                        {emailSubject.replace('{{nombre}}', 'Carlos').replace('{{negocio}}', business.name) || 'Asunto del correo'}
+                      </div>
+                      {emailPreheader && (
+                        <div className="text-[11px] text-slate-400 italic truncate mt-0.5">
+                          {emailPreheader}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Styled Email Body */}
+                    <div className="p-4 space-y-3 bg-[#fafafa]">
+                      {/* Brand Header */}
+                      <div className="bg-[#0a111a] text-white p-3.5 rounded-xl text-center">
+                        <div className="text-xl mb-1">{business.logoUrl || '🍸'}</div>
+                        <h4 className="font-black text-sm text-white tracking-tight">{business.name}</h4>
+                        <p className="text-[10px] text-emerald-400 font-medium">{business.tagline || 'Experiencia & Sabor'}</p>
+                      </div>
+
+                      {/* Content Card */}
+                      <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-xs space-y-2.5 text-slate-800 text-[11px] leading-relaxed whitespace-pre-wrap">
+                        {emailBody.replace('{{nombre}}', 'Carlos').replace('{{negocio}}', business.name).replace('{{premio}}', business.loyaltyConfig.rewardTitle) || 'Aquí aparecerá el texto de tu mensaje...'}
+                      </div>
+
+                      {/* CTA Button */}
+                      {emailButtonText && (
+                        <div className="text-center pt-1">
+                          <span className="inline-block px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black text-xs rounded-xl shadow-md cursor-default">
+                            {emailButtonText} →
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Email Footer */}
+                      <div className="pt-3 border-t border-slate-200 text-center text-[10px] text-slate-400 space-y-0.5">
+                        <p>Enviado a través de <strong>Markethers Platform</strong></p>
+                        <p>{business.address} &bull; {business.city}</p>
+                        <p className="text-slate-400 underline cursor-pointer">Cancelar suscripción de promociones</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom Actions & Sending Progress */}
+                <div className="pt-4 space-y-3">
+                  {emailSendingState === 'sending' && (
+                    <div className="bg-white p-3 rounded-xl border border-indigo-200 shadow-sm space-y-2">
+                      <div className="flex items-center justify-between text-xs font-bold text-indigo-900">
+                        <span>Entregando correos...</span>
+                        <span>{emailSendingProgress}%</span>
+                      </div>
+                      <div className="w-full h-2 bg-indigo-50 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-indigo-600 transition-all duration-300"
+                          style={{ width: `${emailSendingProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {emailSendingState === 'success' && (
+                    <div className="p-3 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-2">
+                      <CheckCheck className="w-4 h-4 text-emerald-600" />
+                      <span>¡Campaña entregada con éxito a {getRecipientEmailsList().count} contactos!</span>
+                    </div>
+                  )}
+
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <a
+                      href={`mailto:?bcc=${encodeURIComponent(getRecipientEmailsList().emails.join(','))}&subject=${encodeURIComponent(emailSubject.replace('{{nombre}}', 'Estimado cliente'))}&body=${encodeURIComponent(emailBody)}`}
+                      className="px-3 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                      title="Abrir en tu programa de correo predeterminado (Gmail, Outlook, Apple Mail)"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Abrir en mi Email</span>
+                    </a>
+
+                    <button
+                      type="button"
+                      disabled={emailSendingState === 'sending' || getRecipientEmailsList().count === 0}
+                      onClick={handleSendEmailCampaign}
+                      className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-extrabold text-xs rounded-xl shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
+                    >
+                      <SendHorizontal className="w-4 h-4 text-indigo-200" />
+                      <span>Enviar a {getRecipientEmailsList().count} Contactos Ahora</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: HISTORIAL DE CAMPAÑAS DE EMAIL ENVIADAS */}
+      {isEmailHistoryModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-2xl w-full p-6 text-slate-900 shadow-2xl relative max-h-[85vh] overflow-y-auto">
+            <button
+              onClick={() => setIsEmailHistoryModalOpen(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 rounded-full"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                <History className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-black text-lg">Historial de Campañas de Email</h3>
+                <span className="text-xs text-slate-500 block">
+                  Registro de difusiones promocionales y avisos enviados a través de Markethers.
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {emailCampaigns.map(camp => (
+                <div key={camp.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase flex items-center gap-1">
+                      <CheckCheck className="w-3 h-3 text-emerald-600" />
+                      <span>Entregado</span>
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      {new Date(camp.sentAt).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })}
+                    </span>
+                  </div>
+
+                  <h4 className="font-extrabold text-sm text-slate-900">{camp.subject}</h4>
+                  <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">{camp.body}</p>
+
+                  <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
+                    <div>
+                      <strong>Audiencia:</strong> {camp.audience}
+                    </div>
+                    <div className="font-bold text-indigo-700">
+                      {camp.recipientsCount} destinatarios
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 mt-5 text-right">
+              <button
+                type="button"
+                onClick={() => setIsEmailHistoryModalOpen(false)}
+                className="py-2.5 px-4 bg-slate-900 text-white font-bold text-xs rounded-xl"
+              >
+                Cerrar Historial
+              </button>
+            </div>
           </div>
         </div>
       )}
