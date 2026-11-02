@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation';
 import { store } from '@/lib/store';
 import { ClientStoreView } from './ClientStoreView';
 
+export const instant = false;
+
 export function generateStaticParams() {
   return store.getBusinesses().map(b => ({ slug: b.slug }));
 }

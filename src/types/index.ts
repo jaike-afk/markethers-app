@@ -13,6 +13,14 @@ export interface LoyaltyCardConfig {
   pointsRatio?: number; // e.g. 1 USD = 1 pt
 }
 
+export interface GoogleReviewConfig {
+  googleReviewUrl: string;
+  googleRating: number;
+  totalReviews: number;
+  rewardForReview?: string;
+  smartFilterEnabled?: boolean; // 4-5 stars to Google, 1-3 stars to internal private feedback
+}
+
 export interface Business {
   id: string;
   slug: string;
@@ -30,6 +38,7 @@ export interface Business {
   pinCode: string; // Cashier access PIN (e.g. 1234)
   currency: string;
   loyaltyConfig: LoyaltyCardConfig;
+  googleReviews: GoogleReviewConfig;
 }
 
 export interface Customer {

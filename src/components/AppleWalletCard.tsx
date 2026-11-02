@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
 import { Business, Customer } from '@/types';
+import { useLanguage } from '@/context/LanguageContext';
 import { StampGrid } from './StampGrid';
 import {
   Sparkles,
@@ -23,6 +24,8 @@ interface AppleWalletCardProps {
 }
 
 export function AppleWalletCard({ business, customer, onRefresh }: AppleWalletCardProps) {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [isFlipped, setIsFlipped] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
@@ -120,7 +123,7 @@ export function AppleWalletCard({ business, customer, onRefresh }: AppleWalletCa
               <div className="flex items-end justify-between mt-4">
                 <div>
                   <span className="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold block">
-                    Titular
+                    {isEn ? 'Cardholder' : 'Titular'}
                   </span>
                   <span className="text-base font-bold text-white tracking-tight">
                     {customer.name}
@@ -128,7 +131,7 @@ export function AppleWalletCard({ business, customer, onRefresh }: AppleWalletCa
                 </div>
                 <div className="text-right">
                   <span className="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold block">
-                    Sellos
+                    {isEn ? 'Stamps' : 'Sellos'}
                   </span>
                   <span
                     className="text-lg font-black tracking-tight"
@@ -154,11 +157,11 @@ export function AppleWalletCard({ business, customer, onRefresh }: AppleWalletCa
                   {isRewardReady ? (
                     <div className="py-1 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md animate-bounce">
                       <Sparkles className="w-3.5 h-3.5 text-black" />
-                      ¡PREMIO LISTO PARA CANJEAR!
+                      {isEn ? 'REWARD READY TO REDEEM!' : '¡PREMIO LISTO PARA CANJEAR!'}
                     </div>
                   ) : (
                     <div className="text-[11px] text-zinc-300 flex items-center justify-center gap-1">
-                      <span>Próximo premio:</span>
+                      <span>{isEn ? 'Upcoming reward:' : 'Próximo premio:'}</span>
                       <strong className="text-white font-semibold">
                         {config.rewardTitle}
                       </strong>
@@ -179,7 +182,7 @@ export function AppleWalletCard({ business, customer, onRefresh }: AppleWalletCa
                     />
                   ) : (
                     <div className="w-32 h-32 bg-zinc-200 animate-pulse rounded-lg flex items-center justify-center text-xs text-zinc-400">
-                      Cargando QR...
+                      {isEn ? 'Loading QR...' : 'Cargando QR...'}
                     </div>
                   )}
                 </div>
@@ -197,7 +200,7 @@ export function AppleWalletCard({ business, customer, onRefresh }: AppleWalletCa
                   )}
                 </button>
                 <span className="text-[10px] text-zinc-400 mt-1">
-                  Muestra este QR en caja para recibir tus sellos
+                  {isEn ? 'Show this QR at checkout to earn your stamps' : 'Muestra este QR en caja para recibir tus sellos'}
                 </span>
               </div>
             </div>
@@ -291,7 +294,7 @@ export function AppleWalletCard({ business, customer, onRefresh }: AppleWalletCa
             <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.74 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.66-7.85-11.88-14.42-6.09-9.5-10.9-20.48-14.42-32.93-3.52-12.45-5.28-24.16-5.28-35.13 0-14.42 3.69-26.43 11.07-36.03 7.38-9.6 16.6-14.48 27.67-14.65 4.58 0 9.87 1.25 15.87 3.75 6 2.5 10.15 3.79 12.45 3.87 1.83 0 6.13-1.37 12.91-4.11 6.78-2.74 12.42-4 16.92-3.79 12.74.84 22.84 5.92 30.3 15.24-11.05 6.73-16.48 16.14-16.29 28.24.19 9.61 3.96 17.65 11.31 24.12 7.35 6.47 16.23 10.14 26.65 11-2.12 6.53-4.63 13.06-7.53 19.59zM119.22 31.84c0-7.39 2.68-14.43 8.04-21.13 5.36-6.7 12.06-10.71 20.1-12.03.22 1.3.33 2.5.33 3.6 0 7.39-2.82 14.63-8.46 21.72-5.64 7.09-12.47 11.19-20.49 12.3-.44-1.52-.66-2.92-.66-4.2l.14-.26z" />
           </svg>
           <span className="text-sm font-semibold tracking-tight">
-            Guardar en Apple Wallet
+            {isEn ? 'Add to Apple Wallet' : 'Guardar en Apple Wallet'}
           </span>
         </button>
 
@@ -319,7 +322,7 @@ export function AppleWalletCard({ business, customer, onRefresh }: AppleWalletCa
             />
           </svg>
           <span className="text-sm font-semibold tracking-tight">
-            Guardar en Google Wallet
+            {isEn ? 'Add to Google Wallet' : 'Guardar en Google Wallet'}
           </span>
         </button>
       </div>

@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { Navbar } from '@/components/Navbar';
+import { LanguageProvider } from '@/context/LanguageContext';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -31,10 +32,12 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-zinc-950 text-white">
-        <Suspense fallback={<div className="h-16 border-b border-zinc-800 bg-zinc-950/80" />}>
-          <Navbar />
-        </Suspense>
-        <div className="flex-1">{children}</div>
+        <LanguageProvider>
+          <Suspense fallback={<div className="h-16 border-b border-zinc-800 bg-zinc-950/80" />}>
+            <Navbar />
+          </Suspense>
+          <div className="flex-1">{children}</div>
+        </LanguageProvider>
       </body>
     </html>
   );

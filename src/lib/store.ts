@@ -29,6 +29,13 @@ export const INITIAL_BUSINESSES: Business[] = [
       allowCashback: true,
       pointsRatio: 1,
     },
+    googleReviews: {
+      googleReviewUrl: 'https://search.google.com/local/writereview?placeid=ChIJN1t_tDeuEmsRUsoyG83frY4',
+      googleRating: 4.9,
+      totalReviews: 248,
+      rewardForReview: '+1 Sello extra de regalo',
+      smartFilterEnabled: true,
+    },
   },
   {
     id: 'biz_barber_2',
@@ -57,6 +64,13 @@ export const INITIAL_BUSINESSES: Business[] = [
       terms: 'Un sello por servicio realizado. Válido con cita previa.',
       allowCashback: false,
     },
+    googleReviews: {
+      googleReviewUrl: 'https://search.google.com/local/writereview?placeid=ChIJN1t_tDeuEmsRUsoyG83frY5',
+      googleRating: 4.8,
+      totalReviews: 189,
+      rewardForReview: '+1 Sello extra de regalo',
+      smartFilterEnabled: true,
+    },
   },
   {
     id: 'biz_burger_3',
@@ -83,6 +97,13 @@ export const INITIAL_BUSINESSES: Business[] = [
       cardTextColor: '#fef2f2',
       accentColor: '#fbbf24', // amber-400
       terms: 'Un sello por combo o hamburguesa consumida. Válido en salón y para llevar.',
+    },
+    googleReviews: {
+      googleReviewUrl: 'https://search.google.com/local/writereview?placeid=ChIJN1t_tDeuEmsRUsoyG83frY6',
+      googleRating: 4.9,
+      totalReviews: 312,
+      rewardForReview: '+1 Sello extra de regalo',
+      smartFilterEnabled: true,
     },
   },
 ];
