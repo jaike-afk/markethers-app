@@ -39,7 +39,7 @@ import {
   Menu,
 } from 'lucide-react';
 
-export default function ClubifyAppPortal() {
+export default function MarkethersAppPortal() {
   const [businesses, setBusinesses] = useState<Business[]>(INITIAL_BUSINESSES);
   const [selectedBusinessId, setSelectedBusinessId] = useState<string>(INITIAL_BUSINESSES[0].id);
 

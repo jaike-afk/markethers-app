@@ -242,7 +242,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* The Clubify Solution */}
+          {/* The Markethers Solution */}
           <div className="bg-gradient-to-b from-emerald-500/15 via-zinc-900 to-zinc-900 border border-emerald-500/40 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-xl">
             <div>
               <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xl mb-4 border border-emerald-500/30">
@@ -511,7 +511,7 @@ export default function HomePage() {
                   <th className="py-4 px-6 font-bold">Característica</th>
                   <th className="py-4 px-6 font-bold text-red-400">Tarjetas de Cartón</th>
                   <th className="py-4 px-6 font-bold text-amber-400">App Móvil Propia</th>
-                  <th className="py-4 px-6 font-black text-emerald-400 bg-emerald-500/10">Markethers (Estilo Clubify)</th>
+                  <th className="py-4 px-6 font-black text-emerald-400 bg-emerald-500/10">Markethers OS</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/80 text-zinc-300">
@@ -794,7 +794,7 @@ export default function HomePage() {
               M
             </div>
             <span className="font-bold text-white">Markethers Loyalty SaaS</span>
-            <span className="text-[10px] text-zinc-400">— Alternativa a SoyClubify</span>
+            <span className="text-[10px] text-zinc-400">— Sistema Operativo de Lealtad & Menú</span>
           </div>
 
           <div className="flex gap-4 text-zinc-400">

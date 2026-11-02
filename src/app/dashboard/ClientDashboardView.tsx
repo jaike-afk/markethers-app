@@ -254,7 +254,7 @@ export function ClientDashboardView({
                 </span>
               </div>
               <p className="text-xs text-zinc-400">
-                Dashboard de Fidelidad, CRM & Menú Digital (Estilo SoyClubify)
+                Dashboard de Fidelidad, CRM & Menú Digital Markethers
               </p>
             </div>
           </div>

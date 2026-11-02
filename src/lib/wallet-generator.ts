@@ -84,7 +84,7 @@ export function generateApplePassJson(business: Business, customer: Customer) {
         {
           key: 'system',
           label: 'PLATAFORMA',
-          value: 'Operado por Markethers Loyalty Platform (soyclubify style)',
+          value: 'Operado por Markethers Loyalty Platform',
         },
       ],
     },

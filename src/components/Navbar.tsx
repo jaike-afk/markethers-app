@@ -49,7 +49,7 @@ export function Navbar() {
               </span>
             </div>
             <span className="text-[10px] text-zinc-400 -mt-1 block">
-              Clubify Alternative
+              Plataforma de Lealtad
             </span>
           </div>
         </Link>
@@ -97,7 +97,7 @@ export function Navbar() {
             }`}
           >
             <Smartphone className="w-4 h-4 text-emerald-400" />
-            <span>Clubify App Móvil (/app)</span>
+            <span>Markethers App (/app)</span>
           </Link>
 
           <Link

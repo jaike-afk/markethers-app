@@ -1,4 +1,4 @@
-# Markethers — Loyalty & Wallet SaaS (Clubify Alternative)
+# Markethers — Loyalty & Wallet OS
 
 Plataforma integral de fidelización de clientes para negocios locales (cafeterías, restaurantes, barberías, boutiques, etc.) basada en **Apple Wallet** y **Google Wallet**, eliminando las tarjetas de cartón y las aplicaciones móviles pesadas.
 
