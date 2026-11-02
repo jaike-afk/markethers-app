@@ -176,10 +176,15 @@ export default function MarkethersAppPortal() {
   const [emailButtonText, setEmailButtonText] = useState<string>('Ver Menú & Tarjeta Digital');
   const [emailButtonUrl, setEmailButtonUrl] = useState<string>('');
   const [emailSenderName, setEmailSenderName] = useState<string>('');
-  const [emailSendingState, setEmailSendingState] = useState<'idle' | 'sending' | 'success'>('idle');
+  const [emailSendingState, setEmailSendingState] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [emailSendingProgress, setEmailSendingProgress] = useState<number>(0);
   const [emailDirectRecipient, setEmailDirectRecipient] = useState<{ name: string; email: string } | null>(null);
   const [isEmailHistoryModalOpen, setIsEmailHistoryModalOpen] = useState(false);
+  const [emailCustomRecipients, setEmailCustomRecipients] = useState<string>('');
+  const [emailTestAddress, setEmailTestAddress] = useState<string>('');
+  const [resendApiKey, setResendApiKey] = useState<string>('');
+  const [showEmailSettings, setShowEmailSettings] = useState<boolean>(false);
+  const [emailErrorMessage, setEmailErrorMessage] = useState<string | null>(null);
 
   // Customer, Sales & Menu Database State (persisted in localStorage)
   const [allCustomers, setAllCustomers] = useState<Customer[]>(INITIAL_CUSTOMERS);
@@ -469,6 +474,11 @@ export default function MarkethersAppPortal() {
         localStorage.setItem('markethers_tracked_qrs_db', JSON.stringify(INITIAL_TRACKED_QRS));
       }
 
+      const storedApiKey = localStorage.getItem('markethers_resend_api_key');
+      if (storedApiKey) {
+        setResendApiKey(storedApiKey);
+      }
+
       setCurrentTimestamp(Date.now());
     } catch (e) {
       console.error(e);
@@ -657,7 +667,16 @@ export default function MarkethersAppPortal() {
         filtered = customers.filter(c => c.totalVisits <= 1);
       }
       const valid = filtered.map(c => c.email?.trim()).filter(Boolean) as string[];
-      return { emails: valid, count: valid.length };
+      let combined = [...valid];
+      if (emailCustomRecipients.trim()) {
+        const parsedCustom = emailCustomRecipients
+          .split(/[\n,;]+/)
+          .map(e => e.trim())
+          .filter(e => e.includes('@'));
+        combined = [...combined, ...parsedCustom];
+      }
+      const unique = Array.from(new Set(combined));
+      return { emails: unique, count: unique.length };
     } else {
       let filtered = merchantClients;
       if (emailAudienceFilter === 'active') {
@@ -668,59 +687,165 @@ export default function MarkethersAppPortal() {
         filtered = merchantClients.filter(m => m.status === 'past_due');
       }
       const valid = filtered.map(m => m.email.trim()).filter(Boolean);
-      return { emails: valid, count: valid.length };
+      let combined = [...valid];
+      if (emailCustomRecipients.trim()) {
+        const parsedCustom = emailCustomRecipients
+          .split(/[\n,;]+/)
+          .map(e => e.trim())
+          .filter(e => e.includes('@'));
+        combined = [...combined, ...parsedCustom];
+      }
+      const unique = Array.from(new Set(combined));
+      return { emails: unique, count: unique.length };
     }
   };
 
-  const handleSendEmailCampaign = (e: React.FormEvent) => {
-    e.preventDefault();
+  const getGmailComposeUrl = () => {
+    const { emails } = getRecipientEmailsList();
+    const bcc = encodeURIComponent(emails.join(','));
+    const subject = encodeURIComponent(emailSubject.replace('{{nombre}}', 'Estimado cliente').replace('{{negocio}}', business.name));
+    const body = encodeURIComponent(
+      `${emailBody.replace('{{nombre}}', 'Estimado cliente').replace('{{negocio}}', business.name)}\n\n${emailButtonText ? `👉 ${emailButtonText}: ${emailButtonUrl}\n\n` : ''}---\nEnviado desde ${business.name}`
+    );
+    return `https://mail.google.com/mail/?view=cm&fs=1&bcc=${bcc}&su=${subject}&body=${body}`;
+  };
+
+  const getOutlookComposeUrl = () => {
+    const { emails } = getRecipientEmailsList();
+    const bcc = encodeURIComponent(emails.join(';'));
+    const subject = encodeURIComponent(emailSubject.replace('{{nombre}}', 'Estimado cliente').replace('{{negocio}}', business.name));
+    const body = encodeURIComponent(
+      `${emailBody.replace('{{nombre}}', 'Estimado cliente').replace('{{negocio}}', business.name)}\n\n${emailButtonText ? `👉 ${emailButtonText}: ${emailButtonUrl}\n\n` : ''}---\nEnviado desde ${business.name}`
+    );
+    return `https://outlook.live.com/mail/0/deeplink/compose?bcc=${bcc}&subject=${subject}&body=${body}`;
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!emailTestAddress || !emailTestAddress.includes('@')) {
+      alert('Por favor ingresa una dirección de correo válida para la prueba (ej: tu-correo@gmail.com).');
+      return;
+    }
+    setEmailSendingState('sending');
+    setEmailSendingProgress(30);
+    setEmailErrorMessage(null);
+
+    try {
+      const res = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipients: [emailTestAddress.trim()],
+          subject: `[PRUEBA] ${emailSubject.replace('{{nombre}}', 'Prueba').replace('{{negocio}}', business.name)}`,
+          body: emailBody.replace('{{nombre}}', 'Prueba').replace('{{negocio}}', business.name),
+          senderName: emailSenderName || business.name,
+          buttonText: emailButtonText,
+          buttonUrl: emailButtonUrl,
+          apiKey: resendApiKey,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al enviar prueba');
+
+      setEmailSendingState('idle');
+      if (data.mode === 'resend_api') {
+        alert(`¡Correo de prueba enviado con éxito a ${emailTestAddress} vía Resend API! Revisa tu bandeja de entrada.`);
+      } else {
+        const testUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(emailTestAddress.trim())}&su=${encodeURIComponent(`[PRUEBA] ${emailSubject.replace('{{nombre}}', 'Prueba').replace('{{negocio}}', business.name)}`)}&body=${encodeURIComponent(emailBody.replace('{{nombre}}', 'Prueba').replace('{{negocio}}', business.name))}`;
+        window.open(testUrl, '_blank');
+      }
+    } catch (e: any) {
+      setEmailSendingState('idle');
+      alert(`Error al enviar prueba: ${e.message}`);
+    }
+  };
+
+  const handleSaveResendApiKey = (key: string) => {
+    setResendApiKey(key);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('markethers_resend_api_key', key.trim());
+    }
+    setCopyToast('Clave de API de Resend guardada correctamente');
+    setTimeout(() => setCopyToast(null), 3000);
+  };
+
+  const handleSendEmailCampaign = async (e?: React.FormEvent) => {
+    if (e && e.preventDefault) e.preventDefault();
+    setEmailErrorMessage(null);
     const { emails, count } = getRecipientEmailsList();
     if (count === 0) {
-      alert('No hay contactos con correo electrónico en la audiencia seleccionada.');
+      alert('No hay contactos con correo electrónico en la audiencia seleccionada. Agrega direcciones en la casilla "Correos adicionales".');
       return;
     }
 
     setEmailSendingState('sending');
-    setEmailSendingProgress(20);
+    setEmailSendingProgress(25);
 
-    setTimeout(() => {
-      setEmailSendingProgress(60);
-      setTimeout(() => {
-        setEmailSendingProgress(100);
-        setEmailSendingState('success');
-
-        const newCampaign: EmailCampaign = {
-          id: `camp_${Date.now()}`,
-          businessId: emailContext === 'customers' ? business.id : 'admin_master',
+    try {
+      const res = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipients: emails,
+          subject: emailSubject.replace('{{nombre}}', 'Estimado cliente').replace('{{negocio}}', business.name),
+          body: emailBody.replace('{{nombre}}', 'Estimado cliente').replace('{{negocio}}', business.name),
           senderName: emailSenderName || business.name,
           replyTo: emailContext === 'customers' ? (business.phone ? `contacto@${business.slug}.com` : 'hola@markethers.app') : 'administracion@markethers.app',
-          subject: emailSubject,
-          preheader: emailPreheader,
-          body: emailBody,
           buttonText: emailButtonText,
           buttonUrl: emailButtonUrl,
-          audience: emailDirectRecipient ? `Directo a ${emailDirectRecipient.name}` : emailAudienceFilter,
-          recipientsCount: count,
-          recipientEmails: emails,
-          status: 'sent',
-          sentAt: new Date().toISOString(),
-          templateType: emailSelectedTemplate,
-        };
+          apiKey: resendApiKey,
+        }),
+      });
 
-        const updatedCampaigns = [newCampaign, ...emailCampaigns];
-        setEmailCampaigns(updatedCampaigns);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('markethers_email_campaigns_db', JSON.stringify(updatedCampaigns));
-        }
+      setEmailSendingProgress(75);
+      const data = await res.json();
 
-        setTimeout(() => {
-          setIsEmailModalOpen(false);
-          setEmailSendingState('idle');
-          setCopyToast(`¡Campaña de email enviada exitosamente a ${count} destinatario(s)! 🚀`);
-          setTimeout(() => setCopyToast(null), 5000);
-        }, 1200);
-      }, 600);
-    }, 500);
+      if (!res.ok) {
+        throw new Error(data.error || 'Error al conectar con el servicio de correo.');
+      }
+
+      setEmailSendingProgress(100);
+      setEmailSendingState('success');
+
+      const newCampaign: EmailCampaign = {
+        id: `camp_${Date.now()}`,
+        businessId: emailContext === 'customers' ? business.id : 'admin_master',
+        senderName: emailSenderName || business.name,
+        replyTo: emailContext === 'customers' ? (business.phone ? `contacto@${business.slug}.com` : 'hola@markethers.app') : 'administracion@markethers.app',
+        subject: emailSubject,
+        preheader: emailPreheader,
+        body: emailBody,
+        buttonText: emailButtonText,
+        buttonUrl: emailButtonUrl,
+        audience: emailDirectRecipient ? `Directo a ${emailDirectRecipient.name}` : `${emailAudienceFilter} (${count} destinatarios)`,
+        recipientsCount: count,
+        recipientEmails: emails,
+        status: 'sent',
+        sentAt: new Date().toISOString(),
+        templateType: emailSelectedTemplate,
+      };
+
+      const updatedCampaigns = [newCampaign, ...emailCampaigns];
+      setEmailCampaigns(updatedCampaigns);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('markethers_email_campaigns_db', JSON.stringify(updatedCampaigns));
+      }
+
+      if (data.mode === 'resend_api') {
+        setCopyToast(`¡Campaña de email entregada con éxito a ${count} contacto(s) vía Resend API! 🚀`);
+      } else {
+        setCopyToast(`¡Campaña registrada para ${count} contacto(s)! Puedes abrirla también con 1-clic en Gmail.`);
+      }
+
+      setTimeout(() => {
+        setIsEmailModalOpen(false);
+        setEmailSendingState('idle');
+      }, 1600);
+    } catch (err: any) {
+      console.error(err);
+      setEmailSendingState('error');
+      setEmailErrorMessage(err?.message || 'Error al enviar la campaña de correo');
+    }
   };
 
   const saveMerchantClientsList = (updated: MerchantClientAccount[]) => {
@@ -7053,28 +7178,59 @@ Contacto y Soporte: soporte@markethers.com
                       </button>
                     </div>
                   ) : (
-                    <select
-                      value={emailAudienceFilter}
-                      onChange={e => setEmailAudienceFilter(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500/20"
-                    >
-                      {emailContext === 'customers' ? (
-                        <>
-                          <option value="all">👥 Todos los comensales ({customers.filter(c => c.email).length} con email)</option>
-                          <option value="vip">⭐ Clientes VIP / Alto Consumo ({customers.filter(c => (c.tier === 'vip' || (c.totalSpent || 0) > 500) && c.email).length})</option>
-                          <option value="frecuente">🔁 Clientes Recurrentes ≥2 Visitas ({customers.filter(c => c.totalVisits >= 2 && c.email).length})</option>
-                          <option value="inactivos">⏰ Clientes Inactivos (Reactivación) ({customers.filter(c => c.totalVisits <= 1 && c.email).length})</option>
-                        </>
-                      ) : (
-                        <>
-                          <option value="all">🏢 Todos los comercios ({merchantClients.length} afiliados)</option>
-                          <option value="active">🟢 Comercios Activos al Día ({merchantClients.filter(m => m.status === 'active').length})</option>
-                          <option value="trialing">🔵 Comercios en Prueba 14d ({merchantClients.filter(m => m.status === 'trialing').length})</option>
-                          <option value="past_due">🔴 Comercios con Deuda / Mora ({merchantClients.filter(m => m.status === 'past_due').length})</option>
-                        </>
+                    <div className="space-y-2">
+                      <select
+                        value={emailAudienceFilter}
+                        onChange={e => setEmailAudienceFilter(e.target.value)}
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      >
+                        {emailContext === 'customers' ? (
+                          <>
+                            <option value="all">👥 Todos los comensales ({customers.filter(c => c.email).length} con email)</option>
+                            <option value="vip">⭐ Clientes VIP / Alto Consumo ({customers.filter(c => (c.tier === 'vip' || (c.totalSpent || 0) > 500) && c.email).length})</option>
+                            <option value="frecuente">🔁 Clientes Recurrentes ≥2 Visitas ({customers.filter(c => c.totalVisits >= 2 && c.email).length})</option>
+                            <option value="inactivos">⏰ Clientes Inactivos (Reactivación) ({customers.filter(c => c.totalVisits <= 1 && c.email).length})</option>
+                          </>
+                        ) : (
+                          <>
+                            <option value="all">🏢 Todos los comercios ({merchantClients.length} afiliados)</option>
+                            <option value="active">🟢 Comercios Activos al Día ({merchantClients.filter(m => m.status === 'active').length})</option>
+                            <option value="trialing">🔵 Comercios en Prueba 14d ({merchantClients.filter(m => m.status === 'trialing').length})</option>
+                            <option value="past_due">🔴 Comercios con Deuda / Mora ({merchantClients.filter(m => m.status === 'past_due').length})</option>
+                          </>
+                        )}
+                      </select>
+
+                      {getRecipientEmailsList().count === 0 && (
+                        <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                          <div>
+                            <strong>Sin correos en este filtro:</strong> Los contactos seleccionados actualmente no tienen correo electrónico registrado en la base de datos (fueron registrados solo con teléfono).
+                            <span className="block mt-1 text-[11px] text-amber-800">
+                              Escribe correos en la casilla &quot;Correos adicionales o de prueba&quot; abajo para poder despachar la campaña.
+                            </span>
+                          </div>
+                        </div>
                       )}
-                    </select>
+                    </div>
                   )}
+
+                  {/* Manual additional / test recipients */}
+                  <div className="mt-2.5">
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      ➕ Correos adicionales o de prueba (separados por comas)
+                    </label>
+                    <input
+                      type="text"
+                      value={emailCustomRecipients}
+                      onChange={e => setEmailCustomRecipients(e.target.value)}
+                      placeholder="ej: tu.correo@gmail.com, socia@negocio.com"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 outline-none font-medium"
+                    />
+                    <span className="text-[10px] text-slate-400 block mt-0.5">
+                      Total destinatarios calculados: <strong>{getRecipientEmailsList().count} contactos</strong> con correo válido.
+                    </span>
+                  </div>
                 </div>
 
                 {/* 2. Plantillas Rápidas */}
@@ -7328,6 +7484,33 @@ Contacto y Soporte: soporte@markethers.com
 
                 {/* Bottom Actions & Sending Progress */}
                 <div className="pt-4 space-y-3">
+                  {/* Test Email Box */}
+                  <div className="bg-white p-3 rounded-xl border border-slate-200/90 shadow-xs space-y-2">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                      <span className="flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Enviar prueba a mi correo:</span>
+                      </span>
+                      <span className="text-[10px] text-slate-400">Verifica cómo llega</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="email"
+                        value={emailTestAddress}
+                        onChange={e => setEmailTestAddress(e.target.value)}
+                        placeholder="ej: tu.correo@gmail.com"
+                        className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSendTestEmail}
+                        className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition-colors whitespace-nowrap"
+                      >
+                        🧪 Enviar Prueba
+                      </button>
+                    </div>
+                  </div>
+
                   {emailSendingState === 'sending' && (
                     <div className="bg-white p-3 rounded-xl border border-indigo-200 shadow-sm space-y-2">
                       <div className="flex items-center justify-between text-xs font-bold text-indigo-900">
@@ -7350,25 +7533,96 @@ Contacto y Soporte: soporte@markethers.com
                     </div>
                   )}
 
-                  <div className="flex flex-col sm:flex-row gap-2">
+                  {emailSendingState === 'error' && emailErrorMessage && (
+                    <div className="p-3 bg-rose-50 text-rose-800 border border-rose-200 rounded-xl text-xs font-bold flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span>{emailErrorMessage}</span>
+                    </div>
+                  )}
+
+                  {/* Sending Buttons */}
+                  <div className="space-y-2">
+                    {/* Primary Button 1: One-Click Gmail Web */}
                     <a
-                      href={`mailto:?bcc=${encodeURIComponent(getRecipientEmailsList().emails.join(','))}&subject=${encodeURIComponent(emailSubject.replace('{{nombre}}', 'Estimado cliente'))}&body=${encodeURIComponent(emailBody)}`}
-                      className="px-3 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
-                      title="Abrir en tu programa de correo predeterminado (Gmail, Outlook, Apple Mail)"
+                      href={getGmailComposeUrl()}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-rose-600/20 flex items-center justify-center gap-2 transition-all hover:scale-[1.01]"
+                      title="Abre Gmail Web directamente con todos los contactos en CCO y el correo redactado"
                     >
-                      <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-                      <span>Abrir en mi Email</span>
+                      <Mail className="w-4 h-4 text-white" />
+                      <span>🔴 Enviar con 1-Clic desde Gmail Web ({getRecipientEmailsList().count} en CCO)</span>
                     </a>
 
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      {/* Primary Button 2: Automated Server Sending */}
+                      <button
+                        type="button"
+                        disabled={emailSendingState === 'sending' || getRecipientEmailsList().count === 0}
+                        onClick={handleSendEmailCampaign}
+                        className="flex-1 py-2.5 px-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-extrabold text-xs rounded-xl shadow-xs flex items-center justify-center gap-1.5 transition-all"
+                        title="Enviar automáticamente a través de la API del servidor (Resend)"
+                      >
+                        <SendHorizontal className="w-3.5 h-3.5" />
+                        <span>🚀 Enviar Automático (Servidor)</span>
+                      </button>
+
+                      <a
+                        href={getOutlookComposeUrl()}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                        title="Abrir en Outlook Web"
+                      >
+                        <span>Outlook Web</span>
+                      </a>
+
+                      <a
+                        href={`mailto:?bcc=${encodeURIComponent(getRecipientEmailsList().emails.join(','))}&subject=${encodeURIComponent(emailSubject.replace('{{nombre}}', 'Estimado cliente'))}&body=${encodeURIComponent(emailBody)}`}
+                        className="px-3 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                        title="Abrir en programa de correo predeterminado (Apple Mail, Thunderbird)"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Apple Mail</span>
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Resend API Key Config Toggle */}
+                  <div className="pt-2 border-t border-slate-200/80">
                     <button
                       type="button"
-                      disabled={emailSendingState === 'sending' || getRecipientEmailsList().count === 0}
-                      onClick={handleSendEmailCampaign}
-                      className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-extrabold text-xs rounded-xl shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
+                      onClick={() => setShowEmailSettings(!showEmailSettings)}
+                      className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
                     >
-                      <SendHorizontal className="w-4 h-4 text-indigo-200" />
-                      <span>Enviar a {getRecipientEmailsList().count} Contactos Ahora</span>
+                      <Wrench className="w-3.5 h-3.5" />
+                      <span>{showEmailSettings ? 'Ocultar ajustes de servidor' : '⚙️ Configurar Servidor Resend API (Envío 100% en background)'}</span>
                     </button>
+
+                    {showEmailSettings && (
+                      <div className="mt-2 p-3 bg-white rounded-xl border border-indigo-200 text-xs space-y-2">
+                        <span className="font-bold text-slate-800 block">Clave de API de Resend (resend.com):</span>
+                        <div className="flex gap-2">
+                          <input
+                            type="password"
+                            value={resendApiKey}
+                            onChange={e => setResendApiKey(e.target.value)}
+                            placeholder="re_xxxxxxxxxxxxxx"
+                            className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleSaveResendApiKey(resendApiKey)}
+                            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg transition-colors"
+                          >
+                            Guardar
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-slate-400 leading-relaxed">
+                          Con tu clave gratuita de Resend, el botón <em>&quot;Enviar Automático&quot;</em> despacha correos reales en segundo plano sin abrir ninguna pestaña externa.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
