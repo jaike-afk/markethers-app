@@ -437,6 +437,19 @@ class DataStore {
     this.menuItems.push(newItem);
     return newItem;
   }
+
+  updateMenuItem(id: string, updates: Partial<MenuItem>): MenuItem | null {
+    const index = this.menuItems.findIndex(m => m.id === id);
+    if (index === -1) return null;
+    this.menuItems[index] = { ...this.menuItems[index], ...updates };
+    return this.menuItems[index];
+  }
+
+  deleteMenuItem(id: string): boolean {
+    const prevLength = this.menuItems.length;
+    this.menuItems = this.menuItems.filter(m => m.id !== id);
+    return this.menuItems.length < prevLength;
+  }
 }
 
 // Global singleton for server-side persistence in dev runtime

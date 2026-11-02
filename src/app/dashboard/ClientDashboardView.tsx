@@ -23,6 +23,12 @@ import {
   AlertCircle,
   Smartphone,
   Save,
+  Edit2,
+  Trash2,
+  Eye,
+  EyeOff,
+  Image as ImageIcon,
+  X,
 } from 'lucide-react';
 
 interface ClientDashboardViewProps {
@@ -45,9 +51,23 @@ export function ClientDashboardView({
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // Menu State
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(initialMenuItems);
+  const [menuModalOpen, setMenuModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [menuForm, setMenuForm] = useState({
+    name: '',
+    category: '',
+    price: '',
+    description: '',
+    imageUrl: '',
+    featured: false,
+    available: true,
+  });
+
   const business = businesses.find(b => b.id === selectedBusinessId) || businesses[0];
   const customers = initialCustomers.filter(c => c.businessId === business.id);
-  const menuItems = initialMenuItems.filter(m => m.businessId === business.id);
+  const currentBusinessMenuItems = menuItems.filter(m => m.businessId === business.id);
   const transactions = initialTransactions.filter(t => t.businessId === business.id);
 
   // Card Designer Form State
@@ -76,6 +96,130 @@ export function ClientDashboardView({
       c.phone.includes(searchQuery) ||
       c.qrCodeToken.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Menu Management Handlers
+  const openNewItemModal = () => {
+    setEditingItem(null);
+    setMenuForm({
+      name: '',
+      category: currentBusinessMenuItems[0]?.category || 'General',
+      price: '',
+      description: '',
+      imageUrl: '',
+      featured: false,
+      available: true,
+    });
+    setMenuModalOpen(true);
+  };
+
+  const openEditItemModal = (item: MenuItem) => {
+    setEditingItem(item);
+    setMenuForm({
+      name: item.name,
+      category: item.category,
+      price: item.price.toString(),
+      description: item.description,
+      imageUrl: item.imageUrl || '',
+      featured: item.featured || false,
+      available: item.available,
+    });
+    setMenuModalOpen(true);
+  };
+
+  const handleSaveMenuItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!menuForm.name || !menuForm.price || !menuForm.category) return;
+
+    if (editingItem) {
+      // Update existing item
+      try {
+        await fetch('/api/menu', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editingItem.id,
+            ...menuForm,
+            price: Number(menuForm.price),
+          }),
+        });
+
+        setMenuItems(prev =>
+          prev.map(m =>
+            m.id === editingItem.id
+              ? {
+                  ...m,
+                  ...menuForm,
+                  price: Number(menuForm.price),
+                }
+              : m
+          )
+        );
+      } catch (err) {
+        console.error('Error updating item:', err);
+      }
+    } else {
+      // Create new item
+      try {
+        const res = await fetch('/api/menu', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            businessId: business.id,
+            ...menuForm,
+            price: Number(menuForm.price),
+          }),
+        });
+        const data = await res.json();
+        if (data.item) {
+          setMenuItems(prev => [...prev, data.item]);
+        }
+      } catch (err) {
+        console.error('Error creating item:', err);
+      }
+    }
+
+    setMenuModalOpen(false);
+  };
+
+  const handleToggleAvailable = async (item: MenuItem) => {
+    const updatedStatus = !item.available;
+    setMenuItems(prev =>
+      prev.map(m => (m.id === item.id ? { ...m, available: updatedStatus } : m))
+    );
+
+    try {
+      await fetch('/api/menu', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: item.id,
+          available: updatedStatus,
+        }),
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteMenuItem = async (id: string) => {
+    if (!confirm('¿Estás seguro de eliminar este producto del menú?')) return;
+
+    setMenuItems(prev => prev.filter(m => m.id !== id));
+    try {
+      await fetch(`/api/menu?id=${id}`, { method: 'DELETE' });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Sample photo presets for quick testing
+  const sampleImages = [
+    { label: '☕ Café Especial', url: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=400&q=80' },
+    { label: '🥐 Croissant', url: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=400&q=80' },
+    { label: '🥑 Avocado Toast', url: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=400&q=80' },
+    { label: '🍔 Burger', url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=400&q=80' },
+    { label: '🍰 Postre', url: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80' },
+  ];
 
   // Sample customer for live designer preview
   const previewCustomer: Customer = {
@@ -110,7 +254,7 @@ export function ClientDashboardView({
                 </span>
               </div>
               <p className="text-xs text-zinc-400">
-                Dashboard de Fidelidad & Retención de Clientes
+                Dashboard de Fidelidad, CRM & Menú Digital (Estilo SoyClubify)
               </p>
             </div>
           </div>
@@ -232,7 +376,7 @@ export function ClientDashboardView({
             }`}
           >
             <Utensils className="w-4 h-4" />
-            <span>Menú Digital ({menuItems.length})</span>
+            <span>Menú Digital & Pedidos ({currentBusinessMenuItems.length})</span>
           </button>
 
           <button
@@ -251,7 +395,6 @@ export function ClientDashboardView({
         {/* TAB 1: CRM & CUSTOMERS */}
         {activeTab === 'crm' && (
           <div className="space-y-4">
-            {/* Search and Filters */}
             <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
               <div className="relative w-full sm:w-80">
                 <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -270,7 +413,6 @@ export function ClientDashboardView({
               </div>
             </div>
 
-            {/* Customers Table */}
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-xl">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
@@ -357,7 +499,6 @@ export function ClientDashboardView({
         {/* TAB 2: LIVE CARD DESIGNER */}
         {activeTab === 'designer' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Left: Designer Form */}
             <div className="lg:col-span-7 bg-zinc-900 border border-zinc-800 rounded-3xl p-6 sm:p-8 space-y-6">
               <div>
                 <h3 className="font-bold text-base text-white">Configuración del Programa</h3>
@@ -374,7 +515,6 @@ export function ClientDashboardView({
               )}
 
               <form onSubmit={handleSaveCardConfig} className="space-y-4">
-                {/* Total Stamps */}
                 <div>
                   <label className="text-xs font-bold text-zinc-300 block mb-1.5">
                     Número de Sellos para Recompensa
@@ -399,7 +539,6 @@ export function ClientDashboardView({
                   </div>
                 </div>
 
-                {/* Reward Title */}
                 <div>
                   <label className="text-xs font-bold text-zinc-300 block mb-1.5">
                     Nombre del Premio
@@ -415,7 +554,6 @@ export function ClientDashboardView({
                   />
                 </div>
 
-                {/* Stamp Icon */}
                 <div>
                   <label className="text-xs font-bold text-zinc-300 block mb-1.5">
                     Ícono del Sello
@@ -448,7 +586,6 @@ export function ClientDashboardView({
                   </div>
                 </div>
 
-                {/* Card Background Color */}
                 <div>
                   <label className="text-xs font-bold text-zinc-300 block mb-1.5">
                     Color de Fondo de la Tarjeta
@@ -480,7 +617,6 @@ export function ClientDashboardView({
                   </div>
                 </div>
 
-                {/* Accent Color */}
                 <div>
                   <label className="text-xs font-bold text-zinc-300 block mb-1.5">
                     Color de Acento / Sellos
@@ -504,7 +640,6 @@ export function ClientDashboardView({
                   </div>
                 </div>
 
-                {/* Terms and Conditions */}
                 <div>
                   <label className="text-xs font-bold text-zinc-300 block mb-1.5">
                     Términos y Condiciones (Reverso del Pase)
@@ -529,7 +664,6 @@ export function ClientDashboardView({
               </form>
             </div>
 
-            {/* Right: Live Interactive Card Preview */}
             <div className="lg:col-span-5 flex flex-col items-center">
               <div className="text-center mb-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-amber-400 block">
@@ -553,45 +687,132 @@ export function ClientDashboardView({
           </div>
         )}
 
-        {/* TAB 3: MENU ITEMS */}
+        {/* TAB 3: COMPLETE MENU MANAGER */}
         {activeTab === 'menu' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="space-y-5">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
-                <h3 className="font-bold text-base text-white">Catálogo de Productos</h3>
+                <h3 className="font-bold text-base text-white">
+                  Menú Digital & Catálogo ({currentBusinessMenuItems.length} productos)
+                </h3>
                 <p className="text-xs text-zinc-400">
-                  Aparecen en tu Menú Digital para pedidos por WhatsApp.
+                  Los productos que configures aquí aparecen inmediatamente en la web pública de tu negocio (`/{business.slug}`) y permiten pedidos por WhatsApp.
                 </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/${business.slug}`}
+                  target="_blank"
+                  className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-colors border border-zinc-700"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Ver Menú en Vivo</span>
+                </Link>
+
+                <button
+                  onClick={openNewItemModal}
+                  className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition-all"
+                >
+                  <Plus className="w-4 h-4 stroke-[3]" />
+                  <span>Agregar Producto</span>
+                </button>
               </div>
             </div>
 
+            {/* Menu Items Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {menuItems.map(item => (
+              {currentBusinessMenuItems.map(item => (
                 <div
                   key={item.id}
-                  className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex gap-3.5 items-center justify-between"
+                  className={`bg-zinc-900 border rounded-2xl p-4 flex flex-col justify-between transition-all ${
+                    item.available
+                      ? 'border-zinc-800 hover:border-zinc-700'
+                      : 'border-zinc-850 opacity-60'
+                  }`}
                 >
-                  {item.imageUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={item.imageUrl}
-                      alt={item.name}
-                      className="w-14 h-14 rounded-xl object-cover shrink-0"
-                    />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-sm text-white truncate">{item.name}</h4>
-                    <span className="text-[10px] text-zinc-400 block mt-0.5">
-                      {item.category}
-                    </span>
-                    <span className="text-xs font-black text-amber-400 mt-1 block">
-                      {business.currency}
-                      {item.price}
-                    </span>
+                  <div>
+                    <div className="flex gap-3.5 items-start">
+                      {item.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={item.imageUrl}
+                          alt={item.name}
+                          className="w-16 h-16 rounded-xl object-cover shrink-0"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-xl bg-zinc-800 flex items-center justify-center text-zinc-600 shrink-0">
+                          <ImageIcon className="w-6 h-6" />
+                        </div>
+                      )}
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="font-bold text-sm text-white truncate">{item.name}</h4>
+                          {item.featured && (
+                            <span className="text-[9px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-md border border-amber-500/30">
+                              Top
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-zinc-400 font-medium block mt-0.5">
+                          {item.category}
+                        </span>
+                        <p className="text-[11px] text-zinc-400 line-clamp-2 mt-1">
+                          {item.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className="text-base font-black text-amber-400">
+                        {business.currency}
+                        {item.price}
+                      </span>
+
+                      {/* Stock availability badge */}
+                      <button
+                        onClick={() => handleToggleAvailable(item)}
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 transition-colors ${
+                          item.available
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
+                            : 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20'
+                        }`}
+                        title="Haz clic para cambiar disponibilidad"
+                      >
+                        {item.available ? (
+                          <>
+                            <Eye className="w-3 h-3" />
+                            <span>Disponible</span>
+                          </>
+                        ) : (
+                          <>
+                            <EyeOff className="w-3 h-3" />
+                            <span>Agotado</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
-                  <span className="text-[10px] px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20">
-                    Activo
-                  </span>
+
+                  {/* Card actions: Edit / Delete */}
+                  <div className="mt-3 pt-3 border-t border-zinc-800/80 flex items-center justify-end gap-2 text-xs">
+                    <button
+                      onClick={() => openEditItemModal(item)}
+                      className="px-2.5 py-1 text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 rounded-lg flex items-center gap-1 transition-colors text-[11px]"
+                    >
+                      <Edit2 className="w-3 h-3" />
+                      <span>Editar</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleDeleteMenuItem(item.id)}
+                      className="px-2.5 py-1 text-red-400 hover:text-red-300 bg-red-950/30 hover:bg-red-950/60 rounded-lg flex items-center gap-1 transition-colors text-[11px]"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Eliminar</span>
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -649,6 +870,152 @@ export function ClientDashboardView({
           </div>
         )}
       </div>
+
+      {/* MODAL: ADD / EDIT MENU ITEM */}
+      {menuModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-lg w-full p-6 text-white shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setMenuModalOpen(false)}
+              className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-white rounded-full bg-zinc-800/80"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400">
+                <Utensils className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-white">
+                  {editingItem ? 'Editar Producto' : 'Nuevo Producto para el Menú'}
+                </h3>
+                <p className="text-xs text-zinc-400">
+                  Configura los detalles que verán tus clientes.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveMenuItem} className="space-y-4 text-xs">
+              <div>
+                <label className="font-bold text-zinc-300 block mb-1">Nombre del Producto</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Latte Vainilla Bourbon"
+                  value={menuForm.name}
+                  onChange={e => setMenuForm(prev => ({ ...prev, name: e.target.value }))}
+                  required
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-zinc-300 block mb-1">Precio ({business.currency})</label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="Ej: 75"
+                    value={menuForm.price}
+                    onChange={e => setMenuForm(prev => ({ ...prev, price: e.target.value }))}
+                    required
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-zinc-300 block mb-1">Categoría</label>
+                  <input
+                    type="text"
+                    placeholder="Ej: Café, Repostería, Desayunos"
+                    value={menuForm.category}
+                    onChange={e => setMenuForm(prev => ({ ...prev, category: e.target.value }))}
+                    required
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-zinc-300 block mb-1">Descripción</label>
+                <textarea
+                  rows={2}
+                  placeholder="Detalla los ingredientes o preparación..."
+                  value={menuForm.description}
+                  onChange={e => setMenuForm(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-zinc-300 block mb-1">URL de la Foto</label>
+                <input
+                  type="url"
+                  placeholder="https://..."
+                  value={menuForm.imageUrl}
+                  onChange={e => setMenuForm(prev => ({ ...prev, imageUrl: e.target.value }))}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                />
+
+                {/* Quick Presets */}
+                <div className="mt-2">
+                  <span className="text-[10px] text-zinc-400 block mb-1">O elige una foto sugerida:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {sampleImages.map(img => (
+                      <button
+                        key={img.label}
+                        type="button"
+                        onClick={() => setMenuForm(prev => ({ ...prev, imageUrl: img.url }))}
+                        className="text-[10px] px-2 py-1 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-zinc-300 transition-colors"
+                      >
+                        {img.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-6 pt-1">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={menuForm.featured}
+                    onChange={e => setMenuForm(prev => ({ ...prev, featured: e.target.checked }))}
+                    className="w-4 h-4 rounded text-amber-500 focus:ring-0 bg-zinc-950 border-zinc-700"
+                  />
+                  <span className="text-zinc-300 font-medium">⭐ Marcar como Destacado (Top)</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={menuForm.available}
+                    onChange={e => setMenuForm(prev => ({ ...prev, available: e.target.checked }))}
+                    className="w-4 h-4 rounded text-amber-500 focus:ring-0 bg-zinc-950 border-zinc-700"
+                  />
+                  <span className="text-zinc-300 font-medium">Disponible para pedir</span>
+                </label>
+              </div>
+
+              <div className="pt-3 border-t border-zinc-800 flex gap-2">
+                <button
+                  type="submit"
+                  className="flex-1 py-3 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs rounded-xl shadow-lg shadow-amber-500/20 transition-all"
+                >
+                  {editingItem ? 'Guardar Cambios' : 'Crear Producto'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMenuModalOpen(false)}
+                  className="py-3 px-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold text-xs rounded-xl transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Stand QR Modal */}
       <CounterQrModal

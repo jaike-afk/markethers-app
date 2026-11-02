@@ -19,6 +19,7 @@ import {
   MessageCircle,
   Share2,
   Check,
+  Search,
 } from 'lucide-react';
 
 interface ClientStoreViewProps {
@@ -46,7 +47,18 @@ export function ClientStoreView({
   // Cart State for Menu
   const [cart, setCart] = useState<Record<string, number>>({});
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [menuSearch, setMenuSearch] = useState('');
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+
+  // Check URL param ?tab=menu on mount
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('tab') === 'menu') {
+        setActiveTab('menu');
+      }
+    }
+  }, []);
 
   // Categories list
   const categories = ['all', ...Array.from(new Set(menuItems.map(m => m.category)))];
@@ -126,10 +138,14 @@ export function ClientStoreView({
     window.open(`https://wa.me/${business.whatsapp}?text=${encoded}`, '_blank');
   };
 
-  const filteredItems =
-    selectedCategory === 'all'
-      ? menuItems
-      : menuItems.filter(m => m.category === selectedCategory);
+  const filteredItems = menuItems.filter(item => {
+    const matchesCat = selectedCategory === 'all' || item.category === selectedCategory;
+    const matchesSearch =
+      !menuSearch.trim() ||
+      item.name.toLowerCase().includes(menuSearch.toLowerCase()) ||
+      item.description.toLowerCase().includes(menuSearch.toLowerCase());
+    return matchesCat && matchesSearch;
+  });
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white pb-24">
@@ -335,6 +351,18 @@ export function ClientStoreView({
         {/* TAB 2: DIGITAL MENU & WHATSAPP ORDERS */}
         {activeTab === 'menu' && (
           <div className="space-y-4">
+            {/* Search Input for Menu */}
+            <div className="relative">
+              <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Buscar platillo, bebida o ingrediente..."
+                value={menuSearch}
+                onChange={e => setMenuSearch(e.target.value)}
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+              />
+            </div>
+
             {/* Category pills */}
             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
               {categories.map(cat => (
@@ -356,10 +384,14 @@ export function ClientStoreView({
             <div className="space-y-3">
               {filteredItems.map(item => {
                 const qty = cart[item.id] || 0;
+                const isOutOfStock = !item.available;
+
                 return (
                   <div
                     key={item.id}
-                    className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3.5 flex gap-3.5 items-center justify-between hover:border-zinc-700 transition-colors"
+                    className={`bg-zinc-900 border rounded-2xl p-3.5 flex gap-3.5 items-center justify-between transition-colors ${
+                      isOutOfStock ? 'border-zinc-850 opacity-60' : 'border-zinc-800 hover:border-zinc-700'
+                    }`}
                   >
                     {item.imageUrl && (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -377,6 +409,11 @@ export function ClientStoreView({
                             Top
                           </span>
                         )}
+                        {isOutOfStock && (
+                          <span className="text-[9px] font-bold uppercase tracking-wider bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-md border border-red-500/30">
+                            Agotado
+                          </span>
+                        )}
                       </div>
                       <p className="text-[11px] text-zinc-400 line-clamp-2 mt-0.5">
                         {item.description}
@@ -388,25 +425,31 @@ export function ClientStoreView({
                     </div>
 
                     {/* Quantity controls */}
-                    <div className="flex items-center gap-1.5 bg-zinc-950 p-1 rounded-xl border border-zinc-800">
-                      {qty > 0 && (
-                        <>
-                          <button
-                            onClick={() => removeFromCart(item.id)}
-                            className="p-1.5 hover:bg-zinc-800 text-zinc-300 rounded-lg transition-colors"
-                          >
-                            <Minus className="w-3.5 h-3.5" />
-                          </button>
-                          <span className="text-xs font-bold px-1 text-white">{qty}</span>
-                        </>
-                      )}
-                      <button
-                        onClick={() => addToCart(item.id)}
-                        className="p-1.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 rounded-lg transition-colors font-bold"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                    {!isOutOfStock ? (
+                      <div className="flex items-center gap-1.5 bg-zinc-950 p-1 rounded-xl border border-zinc-800">
+                        {qty > 0 && (
+                          <>
+                            <button
+                              onClick={() => removeFromCart(item.id)}
+                              className="p-1.5 hover:bg-zinc-800 text-zinc-300 rounded-lg transition-colors"
+                            >
+                              <Minus className="w-3.5 h-3.5" />
+                            </button>
+                            <span className="text-xs font-bold px-1 text-white">{qty}</span>
+                          </>
+                        )}
+                        <button
+                          onClick={() => addToCart(item.id)}
+                          className="p-1.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 rounded-lg transition-colors font-bold"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-zinc-500 font-medium px-2 py-1 bg-zinc-950 rounded-lg border border-zinc-800">
+                        No disponible
+                      </span>
+                    )}
                   </div>
                 );
               })}
