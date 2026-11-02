@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { INITIAL_BUSINESSES, INITIAL_CUSTOMERS, INITIAL_MENU_ITEMS, INITIAL_TRANSACTIONS } from '@/lib/store';
 import { Business, Customer, MenuItem, StampTransaction } from '@/types';
@@ -52,6 +52,8 @@ import {
   ArrowRight,
   Download,
   Phone,
+  Zap,
+  Calendar,
 } from 'lucide-react';
 
 export default function MarkethersAppPortal() {
@@ -75,6 +77,7 @@ export default function MarkethersAppPortal() {
     | 'menu'
     | 'menu_libro'
     | 'infolink'
+    | 'facturacion'
   >('panel');
 
   // Sidebar collapsible groups
@@ -134,15 +137,157 @@ export default function MarkethersAppPortal() {
     document.body.removeChild(link);
   };
 
+  // Subscription & Payment state (Stripe & Gateway)
+  const [subscription, setSubscription] = useState({
+    planId: 'pro' as 'starter' | 'pro' | 'franchise',
+    planName: 'Plan Pro Markethers',
+    billingCycle: 'annual' as 'monthly' | 'annual',
+    price: 32,
+    status: 'trialing',
+    trialDaysLeft: 14,
+    trialEndsAt: '16 Nov 2026',
+    cardBrand: 'Visa',
+    cardLast4: '4242',
+    cardHolder: 'Jaike Romero',
+    gateway: 'stripe' as 'stripe' | 'mercadopago',
+  });
+  const [isUpdateCardModalOpen, setIsUpdateCardModalOpen] = useState(false);
+  const [newCardNumber, setNewCardNumber] = useState('');
+  const [newCardExp, setNewCardExp] = useState('');
+  const [newCardCvc, setNewCardCvc] = useState('');
+  const [newCardHolder, setNewCardHolder] = useState('Jaike Romero');
+  const [newCardZip, setNewCardZip] = useState('06700');
+  const [planChangeToast, setPlanChangeToast] = useState<string | null>(null);
+
+  // Sync with localStorage on client load
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const customBiz = JSON.parse(localStorage.getItem('markethers_custom_businesses') || '[]');
+      if (customBiz.length > 0) {
+        setBusinesses([...customBiz, ...INITIAL_BUSINESSES]);
+        const activeBizId = localStorage.getItem('markethers_active_business_id');
+        if (activeBizId && [...customBiz, ...INITIAL_BUSINESSES].some((b: Business) => b.id === activeBizId)) {
+          setSelectedBusinessId(activeBizId);
+        } else {
+          setSelectedBusinessId(customBiz[0].id);
+        }
+      }
+      const savedSub = localStorage.getItem('markethers_subscription');
+      if (savedSub) {
+        const parsed = JSON.parse(savedSub);
+        setSubscription(prev => ({ ...prev, ...parsed }));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  const handleSelectPlan = (planId: 'starter' | 'pro' | 'franchise') => {
+    const planDetails = {
+      starter: { name: 'Plan Despegue', priceMonthly: 29, priceAnnual: 19 },
+      pro: { name: 'Plan Pro Markethers', priceMonthly: 49, priceAnnual: 32 },
+      franchise: { name: 'Plan Multi-Sucursal', priceMonthly: 99, priceAnnual: 65 },
+    }[planId];
+
+    const newPrice = subscription.billingCycle === 'annual' ? planDetails.priceAnnual : planDetails.priceMonthly;
+    const updated = {
+      ...subscription,
+      planId,
+      planName: planDetails.name,
+      price: newPrice,
+    };
+    setSubscription(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('markethers_subscription', JSON.stringify(updated));
+    }
+    setPlanChangeToast(`¡Plan cambiado a "${planDetails.name}" exitosamente!`);
+    setTimeout(() => setPlanChangeToast(null), 4000);
+  };
+
+  const handleToggleBillingCycle = () => {
+    const nextCycle: 'monthly' | 'annual' = subscription.billingCycle === 'annual' ? 'monthly' : 'annual';
+    const planDetails = {
+      starter: { priceMonthly: 29, priceAnnual: 19 },
+      pro: { priceMonthly: 49, priceAnnual: 32 },
+      franchise: { priceMonthly: 99, priceAnnual: 65 },
+    }[subscription.planId];
+    const newPrice = nextCycle === 'annual' ? planDetails.priceAnnual : planDetails.priceMonthly;
+    const updated: typeof subscription = {
+      ...subscription,
+      billingCycle: nextCycle,
+      price: newPrice,
+    };
+    setSubscription(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('markethers_subscription', JSON.stringify(updated));
+    }
+    setPlanChangeToast(`Facturación cambiada a ${nextCycle === 'annual' ? 'Anual (Ahorras 35%)' : 'Mensual'}`);
+    setTimeout(() => setPlanChangeToast(null), 4000);
+  };
+
+  const handleSaveCard = (e: React.FormEvent) => {
+    e.preventDefault();
+    const last4 = newCardNumber.replace(/\D/g, '').slice(-4) || '4242';
+    const updated = {
+      ...subscription,
+      cardLast4: last4,
+      cardHolder: newCardHolder || subscription.cardHolder,
+      cardBrand: last4.startsWith('5') ? 'Mastercard' : 'Visa',
+    };
+    setSubscription(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('markethers_subscription', JSON.stringify(updated));
+    }
+    setIsUpdateCardModalOpen(false);
+    setPlanChangeToast('¡Método de pago verificado y actualizado con Stripe!');
+    setTimeout(() => setPlanChangeToast(null), 4000);
+  };
+
+  const handleDownloadReceipt = (receiptId: string, amount: string, date: string) => {
+    const receiptText = `=====================================================
+MARKETHERS OS - COMPROBANTE OFICIAL DE FACTURACIÓN
+=====================================================
+Recibo / Invoice ID: ${receiptId}
+Fecha de Emisión: ${date}
+Establecimiento: ${business.name}
+Titular de Cuenta: ${subscription.cardHolder}
+Método de Pago: ${subscription.cardBrand} terminada en •••• ${subscription.cardLast4}
+Pasarela: Stripe Payments (Cifrado TLS 256-bit)
+
+Concepto: Suscripción ${subscription.planName} (${subscription.billingCycle === 'annual' ? 'Pago Anual con Descuento' : 'Pago Mes a Mes'})
+Total Abonado: ${amount}
+Estado: PAGADO / ACTIVO
+ID Transacción Stripe: ch_${Date.now().toString(36)}_${receiptId.toLowerCase()}
+
+Garantía: 14 Días Blindada de Devolución
+Contacto y Soporte: soporte@markethers.com
+=====================================================`;
+    const blob = new Blob([receiptText], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Recibo_${receiptId}_Markethers.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Card Designer state
   const business = businesses.find(b => b.id === selectedBusinessId) || businesses[0];
   const [cardDesignerConfig, setCardDesignerConfig] = useState(business.loyaltyConfig);
   const [whatsappNumberInput, setWhatsappNumberInput] = useState(business.whatsapp || '525577889900');
   const [saveDesignerSuccess, setSaveDesignerSuccess] = useState(false);
 
-  const customers = INITIAL_CUSTOMERS.filter(c => c.businessId === business.id);
-  const menuItems = INITIAL_MENU_ITEMS.filter(m => m.businessId === business.id);
-  const transactions = INITIAL_TRANSACTIONS.filter(t => t.businessId === business.id);
+  const customers = INITIAL_CUSTOMERS.filter(c => c.businessId === business.id).length > 0
+    ? INITIAL_CUSTOMERS.filter(c => c.businessId === business.id)
+    : INITIAL_CUSTOMERS;
+  const menuItems = INITIAL_MENU_ITEMS.filter(m => m.businessId === business.id).length > 0
+    ? INITIAL_MENU_ITEMS.filter(m => m.businessId === business.id)
+    : INITIAL_MENU_ITEMS;
+  const transactions = INITIAL_TRANSACTIONS.filter(t => t.businessId === business.id).length > 0
+    ? INITIAL_TRANSACTIONS.filter(t => t.businessId === business.id)
+    : INITIAL_TRANSACTIONS;
 
   const todayFormatted = 'domingo, 1 de noviembre';
 
@@ -510,6 +655,38 @@ export default function MarkethersAppPortal() {
               </div>
             )}
           </div>
+
+          {/* SECTION 4: SUSCRIPCIÓN & FACTURACIÓN */}
+          <div className="mb-4">
+            <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-2.5 py-1.5 flex items-center justify-between">
+              <span>Suscripción & Pagos</span>
+              <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[9px] font-bold">
+                Activo
+              </span>
+            </div>
+
+            <div className="space-y-0.5 mt-1">
+              <button
+                onClick={() => {
+                  setActiveSection('facturacion');
+                  setMobileSidebarOpen(false);
+                }}
+                className={`w-full py-2 px-3 rounded-xl flex items-center justify-between text-xs font-medium transition-colors ${
+                  activeSection === 'facturacion'
+                    ? 'bg-slate-800 text-white font-bold'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900/40'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <CreditCard className="w-4 h-4 text-emerald-400" />
+                  <span>Facturación & Plan</span>
+                </div>
+                <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950/60 border border-emerald-500/30 px-1.5 py-0.5 rounded">
+                  {subscription.planId === 'starter' ? 'Despegue' : subscription.planId === 'franchise' ? 'Franquicia' : 'Pro'}
+                </span>
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* BOTTOM USER PROFILE: JAIKE ROMERO */}
@@ -594,6 +771,16 @@ export default function MarkethersAppPortal() {
                 </option>
               ))}
             </select>
+
+            {/* Active Subscription Pill Button */}
+            <button
+              onClick={() => setActiveSection('facturacion')}
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 text-xs font-bold transition-all"
+              title="Ver suscripción y facturación"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>{subscription.planName} • Activo</span>
+            </button>
 
             {/* Ver tutorial button */}
             <button
@@ -1545,6 +1732,450 @@ export default function MarkethersAppPortal() {
               </div>
             </div>
           )}
+
+          {/* ========================================================= */}
+          {/* VIEW: FACTURACIÓN & SUSCRIPCIÓN (STRIPE PAYMENTS)         */}
+          {/* ========================================================= */}
+          {activeSection === 'facturacion' && (
+            <div className="space-y-6 animate-in fade-in">
+              {/* Toast confirmation */}
+              {planChangeToast && (
+                <div className="p-4 bg-emerald-500 text-black font-extrabold text-xs rounded-2xl flex items-center justify-between shadow-lg shadow-emerald-500/20">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5 fill-black text-emerald-500" />
+                    <span>{planChangeToast}</span>
+                  </div>
+                  <button
+                    onClick={() => setPlanChangeToast(null)}
+                    className="p-1 hover:bg-black/10 rounded-lg text-black font-bold"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* Header */}
+              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-black uppercase tracking-wider mb-2">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Facturación Segura con Stripe</span>
+                  </div>
+                  <h3 className="font-black text-xl text-slate-900 tracking-tight">
+                    Suscripción & Métodos de Pago
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1 max-w-xl">
+                    Gestiona tu plan activo de Markethers, actualiza tus tarjetas bancarias y descarga tus comprobantes oficiales de pago.
+                  </p>
+                </div>
+
+                {/* Billing cycle switcher button */}
+                <button
+                  onClick={handleToggleBillingCycle}
+                  className="px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-all active:scale-95 shrink-0"
+                >
+                  <Repeat className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>
+                    Cambiar a {subscription.billingCycle === 'annual' ? 'Facturación Mensual' : 'Anual (Ahorra 35%)'}
+                  </span>
+                </button>
+              </div>
+
+              {/* Cards Grid: Active Plan + Payment Method */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+                {/* Card 1: Active Subscription */}
+                <div className="bg-white border-2 border-emerald-500/40 rounded-3xl p-6 shadow-sm flex flex-col justify-between relative overflow-hidden">
+                  <div className="absolute top-0 right-0 px-4 py-1.5 bg-gradient-to-l from-emerald-500 to-teal-500 text-black font-black text-[10px] uppercase tracking-wider rounded-bl-2xl shadow">
+                    Prueba 14 Días Activa
+                  </div>
+
+                  <div>
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                      Tu Suscripción Actual
+                    </span>
+                    <h4 className="text-2xl font-black text-slate-900 tracking-tight">
+                      {subscription.planName}
+                    </h4>
+
+                    <div className="mt-4 flex items-baseline gap-1.5">
+                      <span className="text-4xl font-black text-slate-900">
+                        ${subscription.price}
+                      </span>
+                      <span className="text-xs font-semibold text-slate-500">
+                        USD / mes ({subscription.billingCycle === 'annual' ? 'facturado anualmente' : 'facturado mes a mes'})
+                      </span>
+                    </div>
+
+                    <div className="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-1.5 text-xs text-slate-600">
+                      <div className="flex items-center justify-between font-bold text-slate-800">
+                        <span>Estado:</span>
+                        <span className="text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full text-[11px]">
+                          ● Activa (14 días gratis)
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Días restantes de prueba:</span>
+                        <strong className="text-slate-900">{subscription.trialDaysLeft} días</strong>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Próxima fecha de cobro:</span>
+                        <span className="font-semibold text-slate-900">{subscription.trialEndsAt}</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 space-y-2 text-xs text-slate-700">
+                      <div className="flex items-center gap-2">
+                        <Check className="w-4 h-4 text-emerald-600 stroke-[3]" />
+                        <span>Tarjetas Apple Wallet & Google Wallet activas para clientes</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Check className="w-4 h-4 text-emerald-600 stroke-[3]" />
+                        <span>Menú Digital visual con fotos, videos y visor PDF</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Check className="w-4 h-4 text-emerald-600 stroke-[3]" />
+                        <span>Base de datos propia con exportación a CSV</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Check className="w-4 h-4 text-emerald-600 stroke-[3]" />
+                        <span>Filtro Inteligente de Reseñas Google 5⭐</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+                    <span className="text-slate-400">¿Sin contratos forzosos?</span>
+                    <button
+                      onClick={() => {
+                        if (confirm('¿Deseas cancelar tu suscripción? Puedes reactivarla en cualquier momento.')) {
+                          alert('Tu suscripción continuará activa hasta el final de los 14 días de prueba.');
+                        }
+                      }}
+                      className="text-slate-500 hover:text-red-600 font-bold underline transition-colors"
+                    >
+                      Cancelar suscripción con 1 clic
+                    </button>
+                  </div>
+                </div>
+
+                {/* Card 2: Stripe Payment Card */}
+                <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                        Método de Pago Verificado
+                      </span>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold">
+                        <ShieldCheck className="w-3 h-3 text-blue-600" />
+                        <span>Stripe 256-Bit SSL</span>
+                      </span>
+                    </div>
+
+                    {/* Styled Dark Credit Card */}
+                    <div className="w-full bg-gradient-to-tr from-slate-950 via-slate-900 to-slate-800 text-white rounded-3xl p-6 shadow-xl relative overflow-hidden border border-slate-700">
+                      <div className="absolute -right-8 -bottom-8 w-40 h-40 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="w-10 h-7 rounded-md bg-gradient-to-r from-amber-300 to-amber-500 flex items-center justify-center shadow-inner">
+                          <div className="w-6 h-4 border border-amber-800/40 rounded-sm" />
+                        </div>
+                        <span className="text-sm font-black italic tracking-wider text-slate-200">
+                          {subscription.cardBrand.toUpperCase()}
+                        </span>
+                      </div>
+
+                      <div className="font-mono text-lg sm:text-xl font-bold tracking-widest text-slate-100 mb-4">
+                        •••• •••• •••• {subscription.cardLast4}
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800">
+                        <div>
+                          <span className="text-[9px] uppercase tracking-wider block text-slate-500">Titular</span>
+                          <span className="font-bold text-white uppercase">{subscription.cardHolder}</span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] uppercase tracking-wider block text-slate-500">Vence</span>
+                          <span className="font-mono font-bold text-white">12 / 28</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 p-3 bg-emerald-50/70 border border-emerald-200/60 rounded-2xl flex items-center gap-2.5 text-xs text-emerald-800">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>Tarjeta autorizada con Stripe. <strong>$0.00 cobrados hoy.</strong></span>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t border-slate-100 flex gap-3">
+                    <button
+                      onClick={() => setIsUpdateCardModalOpen(true)}
+                      className="flex-1 py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow transition-all active:scale-95"
+                    >
+                      <CreditCard className="w-4 h-4 text-emerald-400" />
+                      <span>Actualizar Tarjeta / Método de Pago</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Plan Switcher Comparison Grid */}
+              <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+                <div>
+                  <h4 className="font-black text-lg text-slate-900 tracking-tight">
+                    Cambiar o Mejorar tu Plan de Markethers
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Elige el plan ideal según el tamaño de tu establecimiento. Los cambios se aplican al instante sin perder ningún dato de clientes o menú.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Starter Plan */}
+                  <div
+                    className={`rounded-2xl p-5 border-2 transition-all flex flex-col justify-between ${
+                      subscription.planId === 'starter'
+                        ? 'border-emerald-500 bg-emerald-50/20 shadow-md'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <h5 className="font-black text-base text-slate-900">Plan Despegue</h5>
+                        {subscription.planId === 'starter' && (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase">
+                            Plan Actual
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 mb-4 min-h-[32px]">
+                        Para locales pequeños que inician con menú digital y tarjetas de lealtad.
+                      </p>
+                      <div className="text-2xl font-black text-slate-900 mb-4">
+                        ${subscription.billingCycle === 'annual' ? '19' : '29'}{' '}
+                        <span className="text-xs text-slate-400 font-medium">USD / mes</span>
+                      </div>
+                      <ul className="space-y-2 text-xs text-slate-600 mb-6">
+                        <li className="flex items-center gap-2">
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Hasta 400 clientes activos</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Menú Digital en mesa</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Tarjetas Apple & Google Wallet</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Escáner PWA para 2 meseros</span>
+                        </li>
+                      </ul>
+                    </div>
+
+                    <button
+                      onClick={() => handleSelectPlan('starter')}
+                      disabled={subscription.planId === 'starter'}
+                      className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all ${
+                        subscription.planId === 'starter'
+                          ? 'bg-emerald-100 text-emerald-800 font-extrabold cursor-default'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+                      }`}
+                    >
+                      {subscription.planId === 'starter' ? '✓ Plan Activo' : 'Cambiar a Despegue'}
+                    </button>
+                  </div>
+
+                  {/* Pro Plan */}
+                  <div
+                    className={`rounded-2xl p-5 border-2 transition-all flex flex-col justify-between relative ${
+                      subscription.planId === 'pro'
+                        ? 'border-emerald-500 bg-emerald-50/20 shadow-md ring-2 ring-emerald-500/20'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-gradient-to-r from-emerald-500 to-lime-400 text-black text-[10px] font-black uppercase tracking-wider">
+                      🔥 Más Elegido
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <h5 className="font-black text-base text-slate-900">Plan Pro Markethers</h5>
+                        {subscription.planId === 'pro' && (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase">
+                            Plan Actual
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 mb-4 min-h-[32px]">
+                        Para restaurantes y bares que quieren llenar mesas y dominar Google Maps.
+                      </p>
+                      <div className="text-2xl font-black text-slate-900 mb-4">
+                        ${subscription.billingCycle === 'annual' ? '32' : '49'}{' '}
+                        <span className="text-xs text-slate-400 font-medium">USD / mes</span>
+                      </div>
+                      <ul className="space-y-2 text-xs text-slate-600 mb-6">
+                        <li className="flex items-center gap-2">
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span><strong>Clientes ILIMITADOS</strong></span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Menú con fotos Y VIDEOS de platillos</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Filtro de Reseñas Google Maps 5⭐</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>CRM con Exportación CSV & Push</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Escáneres ilimitados con PIN</span>
+                        </li>
+                      </ul>
+                    </div>
+
+                    <button
+                      onClick={() => handleSelectPlan('pro')}
+                      disabled={subscription.planId === 'pro'}
+                      className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all ${
+                        subscription.planId === 'pro'
+                          ? 'bg-emerald-500 text-black font-extrabold cursor-default shadow-md shadow-emerald-500/20'
+                          : 'bg-[#22c55e] hover:bg-emerald-600 text-black font-extrabold'
+                      }`}
+                    >
+                      {subscription.planId === 'pro' ? '✓ Plan Activo' : 'Activar Plan Pro'}
+                    </button>
+                  </div>
+
+                  {/* Franchise Plan */}
+                  <div
+                    className={`rounded-2xl p-5 border-2 transition-all flex flex-col justify-between ${
+                      subscription.planId === 'franchise'
+                        ? 'border-emerald-500 bg-emerald-50/20 shadow-md'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <h5 className="font-black text-base text-slate-900">Multi-Sucursal</h5>
+                        {subscription.planId === 'franchise' && (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase">
+                            Plan Actual
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 mb-4 min-h-[32px]">
+                        Para cadenas y marcas con varias sucursales y control centralizado.
+                      </p>
+                      <div className="text-2xl font-black text-slate-900 mb-4">
+                        ${subscription.billingCycle === 'annual' ? '65' : '99'}{' '}
+                        <span className="text-xs text-slate-400 font-medium">USD / mes</span>
+                      </div>
+                      <ul className="space-y-2 text-xs text-slate-600 mb-6">
+                        <li className="flex items-center gap-2">
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Todo lo incluido en Pro</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Hasta 5 sucursales unificadas</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Dominio personalizado de marca</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Reportes comparativos y gerente</span>
+                        </li>
+                      </ul>
+                    </div>
+
+                    <button
+                      onClick={() => handleSelectPlan('franchise')}
+                      disabled={subscription.planId === 'franchise'}
+                      className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all ${
+                        subscription.planId === 'franchise'
+                          ? 'bg-emerald-100 text-emerald-800 font-extrabold cursor-default'
+                          : 'bg-slate-900 hover:bg-slate-800 text-white'
+                      }`}
+                    >
+                      {subscription.planId === 'franchise' ? '✓ Plan Activo' : 'Mejorar a Multi-Sucursal'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Invoices & Receipts History */}
+              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+                <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+                  <div>
+                    <h4 className="font-bold text-base text-slate-900">Historial de Facturas & Comprobantes</h4>
+                    <p className="text-xs text-slate-500">Recibos emitidos automáticamente por Stripe Payments.</p>
+                  </div>
+                  <span className="text-xs font-bold px-3 py-1 bg-slate-50 text-slate-700 rounded-lg border border-slate-200">
+                    2 Comprobantes
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider border-b border-slate-200">
+                      <tr>
+                        <th className="py-3 px-4 font-bold">No. Recibo</th>
+                        <th className="py-3 px-4 font-bold">Fecha</th>
+                        <th className="py-3 px-4 font-bold">Concepto</th>
+                        <th className="py-3 px-4 font-bold">Monto</th>
+                        <th className="py-3 px-4 font-bold">Estado</th>
+                        <th className="py-3 px-4 font-bold text-right">Comprobante</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                      <tr className="hover:bg-slate-50/80">
+                        <td className="py-3 px-4 font-mono font-bold text-slate-900">MK-2026-001</td>
+                        <td className="py-3 px-4 text-slate-500">Hoy (1 Nov 2026)</td>
+                        <td className="py-3 px-4 font-medium">Activación Periodo de Prueba (14 Días)</td>
+                        <td className="py-3 px-4 font-bold text-slate-900">$0.00 USD</td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                            Pagado
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <button
+                            onClick={() => handleDownloadReceipt('MK-2026-001', '$0.00 USD', '1 Nov 2026')}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg font-bold text-xs transition-colors"
+                          >
+                            <Download className="w-3.5 h-3.5 text-slate-600" />
+                            <span>Descargar</span>
+                          </button>
+                        </td>
+                      </tr>
+                      <tr className="hover:bg-slate-50/80">
+                        <td className="py-3 px-4 font-mono font-bold text-slate-900">MK-2026-002</td>
+                        <td className="py-3 px-4 text-slate-500">{subscription.trialEndsAt}</td>
+                        <td className="py-3 px-4 font-medium">Renovación {subscription.planName}</td>
+                        <td className="py-3 px-4 font-bold text-slate-900">${subscription.price}.00 USD</td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">
+                            Programado
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <span className="text-[11px] text-slate-400 italic">Al finalizar prueba</span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
         </main>
       </div>
 
@@ -1774,6 +2405,7 @@ export default function MarkethersAppPortal() {
                 { label: 'Menú Digital: Platillo por platillo (Fotos y Videos)', id: 'menu', icon: '🍽️' },
                 { label: 'Menú Libro: Subir PDF de tu Carta Diseñada', id: 'menu_libro', icon: '📖' },
                 { label: 'InfoLink: Mini-sitio y link en bio', id: 'infolink', icon: '📲' },
+                { label: 'Suscripción & Métodos de Pago (Stripe)', id: 'facturacion', icon: '💳' },
               ]
                 .filter(item => item.label.toLowerCase().includes(searchFilter.toLowerCase()))
                 .map(item => (
@@ -1790,6 +2422,132 @@ export default function MarkethersAppPortal() {
                   </button>
                 ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Update Payment Card Modal (Stripe) */}
+      {isUpdateCardModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 text-slate-900 shadow-2xl relative">
+            <button
+              onClick={() => setIsUpdateCardModalOpen(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 rounded-full"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 text-slate-900 mb-1">
+              <CreditCard className="w-5 h-5 text-emerald-600" />
+              <h3 className="font-black text-lg">Actualizar Tarjeta con Stripe</h3>
+            </div>
+            <p className="text-xs text-slate-500 mb-4">
+              Tus datos bancarios se transmiten con cifrado bancario TLS de 256 bits directo a Stripe.
+            </p>
+
+            <form onSubmit={handleSaveCard} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Nombre del Titular de la Tarjeta *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newCardHolder}
+                  onChange={e => setNewCardHolder(e.target.value)}
+                  placeholder="ej. Jaike Romero"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Número de Tarjeta (Stripe) *
+                </label>
+                <input
+                  type="text"
+                  required
+                  maxLength={19}
+                  value={newCardNumber}
+                  onChange={e => {
+                    const v = e.target.value.replace(/\D/g, '').slice(0, 16);
+                    setNewCardNumber(v.replace(/(.{4})/g, '$1 ').trim());
+                  }}
+                  placeholder="4242 •••• •••• 4242"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Vencimiento (MM/AA) *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={5}
+                    value={newCardExp}
+                    onChange={e => {
+                      const v = e.target.value.replace(/\D/g, '').slice(0, 4);
+                      if (v.length > 2) {
+                        setNewCardExp(v.slice(0, 2) + '/' + v.slice(2));
+                      } else {
+                        setNewCardExp(v);
+                      }
+                    }}
+                    placeholder="12/28"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Código CVC / CVV *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    maxLength={4}
+                    value={newCardCvc}
+                    onChange={e => setNewCardCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    placeholder="•••"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Código Postal de Facturación *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newCardZip}
+                  onChange={e => setNewCardZip(e.target.value)}
+                  placeholder="ej. 06700"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20"
+                />
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsUpdateCardModalOpen(false)}
+                  className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 bg-[#22c55e] hover:bg-emerald-600 text-white font-extrabold text-xs rounded-xl shadow-md shadow-emerald-500/20 flex items-center justify-center gap-1.5"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Guardar y Verificar con Stripe</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

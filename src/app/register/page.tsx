@@ -107,6 +107,33 @@ function RegisterForm() {
       };
 
       store.addBusiness(newBiz);
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('markethers_active_business_id', newBiz.id);
+        const existingBizList = JSON.parse(localStorage.getItem('markethers_custom_businesses') || '[]');
+        localStorage.setItem('markethers_custom_businesses', JSON.stringify([...existingBizList, newBiz]));
+        localStorage.setItem(
+          'markethers_subscription',
+          JSON.stringify({
+            planId: selectedPlan,
+            planName: planPricing.name,
+            billingCycle,
+            price: currentPrice,
+            status: 'trialing',
+            trialDaysLeft: 14,
+            trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('es-ES', {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+            }),
+            cardLast4: cardNumber ? cardNumber.replace(/\D/g, '').slice(-4) || '4242' : '4242',
+            cardBrand: cardNumber.startsWith('5') ? 'Mastercard' : 'Visa',
+            cardHolder: ownerName || 'Propietario',
+            gateway: paymentMethod,
+          })
+        );
+      }
+
       setLoading(false);
       router.push('/app');
     }, 1200);
