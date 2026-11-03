@@ -195,7 +195,7 @@ export default function HomePage() {
         </div>
 
         {/* Main Headline */}
-        <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-white max-w-5xl mx-auto leading-[1.08]">
+        <h1 className="text-3xl sm:text-6xl md:text-7xl font-black tracking-tight text-white max-w-5xl mx-auto leading-[1.12] sm:leading-[1.08]">
           {t.hero.headlinePart1}{' '}
           <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-lime-300 bg-clip-text text-transparent">
             {t.hero.headlineHighlight}

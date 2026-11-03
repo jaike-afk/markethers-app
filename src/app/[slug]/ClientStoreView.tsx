@@ -245,12 +245,12 @@ export function ClientStoreView({
         </div>
 
         {/* Navigation Tabs (InfoLink Style) */}
-        <div className="flex p-1 bg-zinc-900/90 rounded-2xl border border-zinc-800 mt-5 shadow-lg">
+        <div className="sticky top-2 z-30 flex p-1 bg-zinc-900/95 backdrop-blur-md rounded-2xl border border-zinc-800 mt-5 shadow-2xl">
           <button
             onClick={() => setActiveTab('card')}
             className={`flex-1 py-2 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all ${
               activeTab === 'card'
-                ? 'bg-amber-500 text-zinc-950 shadow-md'
+                ? 'bg-amber-500 text-zinc-950 shadow-md font-extrabold'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
@@ -262,7 +262,7 @@ export function ClientStoreView({
             onClick={() => setActiveTab('menu')}
             className={`flex-1 py-2 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all ${
               activeTab === 'menu'
-                ? 'bg-amber-500 text-zinc-950 shadow-md'
+                ? 'bg-amber-500 text-zinc-950 shadow-md font-extrabold'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
@@ -279,7 +279,7 @@ export function ClientStoreView({
             onClick={() => setActiveTab('info')}
             className={`flex-1 py-2 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all ${
               activeTab === 'info'
-                ? 'bg-amber-500 text-zinc-950 shadow-md'
+                ? 'bg-amber-500 text-zinc-950 shadow-md font-extrabold'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
@@ -625,33 +625,47 @@ export function ClientStoreView({
 
             {/* Sticky Table Order Summary Bar when items selected */}
             {totalCartCount > 0 && customerMenuViewMode === 'interactive' && (
-              <div className="fixed bottom-4 left-4 right-4 max-w-md mx-auto z-40">
-                <div className="bg-zinc-900 border border-amber-500/50 rounded-2xl p-3.5 shadow-2xl flex items-center justify-between backdrop-blur-xl">
-                  <div>
-                    <span className="text-[10px] text-zinc-400 uppercase font-bold block">
-                      {totalCartCount} platillo(s) seleccionados
+              <div className="fixed bottom-4 left-4 right-4 max-w-md mx-auto z-40 animate-in slide-in-from-bottom">
+                <div className="bg-zinc-900/95 border-2 border-amber-500/80 rounded-2xl p-3.5 shadow-2xl flex items-center justify-between backdrop-blur-xl gap-2">
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-zinc-400 uppercase font-bold block truncate">
+                      {totalCartCount} seleccionados {tableNumber ? `• Mesa ${tableNumber}` : ''}
                     </span>
-                    <span className="text-base font-black text-amber-400">
-                      Total estimado: {business.currency}
-                      {totalCartAmount}
+                    <span className="text-base font-black text-amber-400 block truncate">
+                      {business.currency}{totalCartAmount}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       onClick={() => setCart({})}
-                      className="py-2 px-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white font-bold text-xs rounded-xl transition-all"
+                      className="py-2 px-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white font-bold text-xs rounded-xl transition-all"
                       title="Limpiar selección"
                     >
                       Limpiar
                     </button>
-                    <button
-                      onClick={() => setActiveTab('card')}
-                      className="py-2.5 px-3.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-extrabold text-xs rounded-xl flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition-all active:scale-95"
-                    >
-                      <CreditCard className="w-4 h-4" />
-                      <span>Sumar Sellos</span>
-                    </button>
+                    {business.whatsapp ? (
+                      <a
+                        href={`https://wa.me/${business.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`¡Hola! Quisiera ordenar ${tableNumber ? `desde la Mesa ${tableNumber} en ` : ''}${business.name}:\n\n${Object.entries(cart).map(([id, qty]) => {
+                          const item = menuItems.find(m => m.id === id);
+                          return `• ${qty}x ${item?.name || 'Item'} (${business.currency}${item ? item.price * qty : 0})`;
+                        }).join('\n')}\n\nTotal estimado: ${business.currency}${totalCartAmount}`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="py-2.5 px-3 bg-[#22c55e] hover:bg-emerald-600 text-white font-extrabold text-xs rounded-xl flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        <span>Pedir</span>
+                      </a>
+                    ) : (
+                      <button
+                        onClick={() => setActiveTab('card')}
+                        className="py-2.5 px-3 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-extrabold text-xs rounded-xl flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition-all active:scale-95"
+                      >
+                        <CreditCard className="w-3.5 h-3.5" />
+                        <span>Sellos</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
