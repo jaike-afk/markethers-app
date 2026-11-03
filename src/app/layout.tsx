@@ -29,15 +29,15 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased overflow-x-hidden max-w-full`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-zinc-950 text-white" suppressHydrationWarning>
+      <body className="min-h-full flex flex-col bg-zinc-950 text-white overflow-x-hidden max-w-full" suppressHydrationWarning>
         <LanguageProvider>
           <Suspense fallback={<div className="h-16 border-b border-zinc-800 bg-zinc-950/80" />}>
             <Navbar />
           </Suspense>
-          <div className="flex-1">{children}</div>
+          <div className="flex-1 overflow-x-hidden max-w-full w-full">{children}</div>
         </LanguageProvider>
       </body>
     </html>

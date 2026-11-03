@@ -187,7 +187,15 @@ export function Navbar() {
         </div>
 
         {/* Mobile menu toggle & quick lang */}
-        <div className="flex items-center gap-2 sm:hidden">
+        <div className="flex items-center gap-1.5 sm:hidden">
+          <Link
+            href="/login"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-zinc-900 border border-zinc-800 text-[11px] font-bold text-emerald-400 hover:bg-zinc-800 transition-colors"
+          >
+            <Store className="w-3.5 h-3.5" />
+            <span>Acceso Dueño</span>
+          </Link>
+
           <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-xl p-0.5 text-xs">
             <button
               onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}
@@ -200,9 +208,9 @@ export function Navbar() {
 
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-900"
+            className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-900"
           >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </div>

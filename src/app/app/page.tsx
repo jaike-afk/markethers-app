@@ -1663,7 +1663,7 @@ Contacto y Soporte: soporte@markethers.com
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-800 flex font-sans antialiased">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-800 flex font-sans antialiased overflow-x-hidden max-w-full w-full">
       {/* ========================================================= */}
       {/* 1. LEFT SIDEBAR (EXACT REPLICA FROM REFERENCE)             */}
       {/* ========================================================= */}
@@ -2107,7 +2107,7 @@ Contacto y Soporte: soporte@markethers.com
       {/* ========================================================= */}
       {/* 2. MAIN CONTENT AREA                                      */}
       {/* ========================================================= */}
-      <div className="flex-1 lg:pl-64 flex flex-col min-h-screen">
+      <div className="flex-1 lg:pl-64 flex flex-col min-h-screen min-w-0 max-w-full overflow-x-hidden w-full">
         {/* TOP HEADER: EXACT MATCH */}
         <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-3.5 sm:px-8 py-3 sm:py-3.5 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0 flex-1">

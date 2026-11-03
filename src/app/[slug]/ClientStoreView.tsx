@@ -177,7 +177,7 @@ export function ClientStoreView({
   });
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white pb-24">
+    <div className="min-h-screen bg-zinc-950 text-white pb-24 overflow-x-hidden max-w-full w-full">
       {/* Hero Cover Banner */}
       <div className="relative h-44 sm:h-56 w-full overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
