@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { AppleWalletCard } from '@/components/AppleWalletCard';
 import { GoogleReviewCard } from '@/components/GoogleReviewCard';
 import { DigitalMenuShowcase } from '@/components/DigitalMenuShowcase';
-import { InfoLinkSection } from '@/components/InfoLinkSection';
 import { PricingSection } from '@/components/PricingSection';
 import { TestimonialsSection } from '@/components/TestimonialsSection';
 import { INITIAL_BUSINESSES, INITIAL_CUSTOMERS } from '@/lib/store';
@@ -16,37 +15,18 @@ import {
   Smartphone,
   QrCode,
   Users,
-  Utensils,
-  TrendingUp,
   ArrowRight,
   CheckCircle2,
   ShieldCheck,
   Zap,
-  Gift,
-  Clock,
-  ChevronRight,
   ChevronDown,
-  Store,
-  Layers,
-  Check,
-  X,
-  Play,
-  Share2,
-  MessageCircle,
   Bell,
-  Heart,
-  HelpCircle,
-  DollarSign,
-  Coffee,
-  Scissors,
-  Award,
-  BarChart3,
-  Flame,
-  FileText,
-  CreditCard,
-  UploadCloud,
-  Globe,
   Star,
+  Globe,
+  CreditCard,
+  FileText,
+  UploadCloud,
+  Check,
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -55,60 +35,13 @@ export default function HomePage() {
   const t = translations[activeLang];
 
   const [interactiveStamps, setInteractiveStamps] = useState(6);
-  const [roiCustomersPerDay, setRoiCustomersPerDay] = useState(75);
-  const [roiAverageTicket, setRoiAverageTicket] = useState(90);
-  const [selectedIndustry, setSelectedIndustry] = useState<'cafe' | 'barber' | 'restaurant'>('cafe');
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   const demoBusiness = INITIAL_BUSINESSES[0]; // Café Aroma
   const demoCustomer = INITIAL_CUSTOMERS[0]; // Carlos Mendoza
 
-  // Calculations for ROI section
-  const monthlyRevenue = roiCustomersPerDay * roiAverageTicket * 30;
-  const estimatedRecovered = Math.round(monthlyRevenue * 0.20); // 20% recovered revenue
-  const returnVisitsGained = Math.round(roiCustomersPerDay * 30 * 0.22); // 22% more visits
-
   const toggleFaq = (index: number) => {
     setOpenFaq(openFaq === index ? null : index);
-  };
-
-  const industriesData = {
-    cafe: {
-      title: activeLang === 'es' ? 'Cafeterías, Reposterías & Brunch' : 'Cafes, Bakeries & Brunch',
-      example:
-        activeLang === 'es'
-          ? 'Por cada 8 bebidas o desayunos consumidos, el 9º café de especialidad es gratis.'
-          : 'For every 8 specialty drinks or meals ordered, the 9th specialty coffee is on the house.',
-      result: activeLang === 'es' ? '+34% de visitas recurrentes entre semana.' : '+34% repeat weekday visits.',
-      icon: '☕',
-      badge: activeLang === 'es' ? 'El programa más popular' : 'Most popular loyalty format',
-    },
-    barber: {
-      title: activeLang === 'es' ? 'Barberías, Salones & Spas' : 'Barbershops, Salons & Spas',
-      example:
-        activeLang === 'es'
-          ? 'En tu 5to corte de cabello, recibe un ritual de barba o tratamiento capilar sin costo.'
-          : 'On your 5th haircut, receive a complimentary beard grooming ritual or scalp treatment.',
-      result:
-        activeLang === 'es'
-          ? 'El 82% de los clientes vuelve antes de 21 días para no perder su racha.'
-          : '82% of clients rebook within 21 days to maintain their loyalty streak.',
-      icon: '💈',
-      badge: activeLang === 'es' ? 'Citas recurrentes automáticas' : 'Automatic repeat bookings',
-    },
-    restaurant: {
-      title: activeLang === 'es' ? 'Paleterías, Restaurantes & Bares' : 'Popsicle & Ice Cream Shops, Restaurants & Bars',
-      example:
-        activeLang === 'es'
-          ? 'Suma 6 visitas o consumos y llévate una paleta artesanal doble, trago o postre de la casa.'
-          : 'Collect 6 visits or purchases and unlock a free artisan popsicle, drink or house dessert.',
-      result:
-        activeLang === 'es'
-          ? '+45% de clientes frecuentes y mayor ticket promedio en mostrador.'
-          : '+45% repeat customers and higher average spend at checkout.',
-      icon: '🍦',
-      badge: activeLang === 'es' ? 'Fidelización directa en mostrador' : 'Direct in-store loyalty',
-    },
   };
 
   return (
@@ -192,24 +125,24 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {/* Feature Checkmarks */}
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-xs text-zinc-400 font-medium">
-          <span className="flex items-center gap-1.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            {t.hero.check1}
+        {/* 3 Core Selling Feature Badges */}
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-xs font-semibold">
+          <span className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{activeLang === 'es' ? '1. Recompensas en Apple & Google Wallet' : '1. Apple & Google Wallet Rewards'}</span>
           </span>
-          <span className="flex items-center gap-1.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            {t.hero.check2}
+          <span className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300">
+            <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>{activeLang === 'es' ? '2. Menú Digital (En Sistema o tu PDF)' : '2. Digital Menu (Platform or PDF)'}</span>
           </span>
-          <span className="flex items-center gap-1.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            {t.hero.check3}
+          <span className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300">
+            <CheckCircle2 className="w-4 h-4 text-blue-400 shrink-0" />
+            <span>{activeLang === 'es' ? '3. Filtro 5⭐ para Reseñas en Google Maps' : '3. 5⭐ Google Maps Reviews Filter'}</span>
           </span>
         </div>
 
         {/* Hero Interactive Wallet Preview */}
-        <div className="mt-14 max-w-4xl mx-auto bg-gradient-to-b from-zinc-900/90 via-zinc-900/40 to-zinc-950 border border-zinc-800 rounded-3xl p-6 sm:p-10 shadow-2xl relative">
+        <div className="mt-12 max-w-4xl mx-auto bg-gradient-to-b from-zinc-900/90 via-zinc-900/40 to-zinc-950 border border-zinc-800 rounded-3xl p-6 sm:p-10 shadow-2xl relative">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pb-6 border-b border-zinc-800/80">
             <div className="text-left">
               <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 block mb-0.5">
@@ -220,7 +153,7 @@ export default function HomePage() {
 
             <button
               onClick={() => setInteractiveStamps(prev => (prev >= 8 ? 1 : prev + 1))}
-              className="px-5 py-2.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-bold text-xs rounded-xl border border-emerald-500/40 flex items-center gap-2 transition-all active:scale-95 shrink-0 shadow-lg shadow-emerald-500/10"
+              className="px-5 py-2.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-bold text-xs rounded-xl border border-emerald-500/40 flex items-center gap-2 transition-all active:scale-95 shrink-0 shadow-lg shadow-emerald-500/10 cursor-pointer"
             >
               <Zap className="w-4 h-4 text-emerald-400 fill-current" />
               <span>{t.hero.simButton}</span>
@@ -262,36 +195,128 @@ export default function HomePage() {
       </section>
 
       {/* ========================================================= */}
-      {/* 2. DIGITAL MENU SPOTLIGHT: UPLOAD OR BUILD IN PLATFORM   */}
+      {/* 2. PILAR 1: RECOMPENSAS EN APPLE & GOOGLE WALLET           */}
       {/* ========================================================= */}
-      <DigitalMenuShowcase />
-
-      {/* ========================================================= */}
-      {/* 2.5 INFOLINK ALL-IN-ONE ECOSYSTEM (LINK-IN-BIO + QR)     */}
-      {/* ========================================================= */}
-      <InfoLinkSection />
-
-      {/* ========================================================= */}
-      {/* 3. GOOGLE REVIEWS 5-STAR SMART FILTER SPOTLIGHT           */}
-      {/* ========================================================= */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-20 border-t border-zinc-900">
+      <section id="recompensas" className="max-w-6xl mx-auto px-4 sm:px-6 py-20 border-t border-zinc-900">
         <div className="text-center max-w-3xl mx-auto mb-14">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-bold mb-3 border border-blue-500/20">
-            <Star className="w-3.5 h-3.5 fill-current" />
-            <span>{t.googleReviews.tag}</span>
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-bold mb-4">
+            <CreditCard className="w-4 h-4 text-emerald-400" />
+            <span>{activeLang === 'es' ? 'Pilar 1: Fidelización & Recompensas' : 'Pillar 1: Loyalty & Rewards'}</span>
           </div>
-          <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
+          <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight">
+            {activeLang === 'es' ? 'Tarjetas de sellos nativas en el celular de tus comensales' : 'Native stamp cards right on your diners’ phones'}
+          </h2>
+          <p className="mt-4 text-sm sm:text-base text-zinc-300 max-w-2xl mx-auto leading-relaxed">
+            {activeLang === 'es'
+              ? 'Tus clientes no tienen que descargar apps pesadas ni crear cuentas tediosas. Guardan su tarjeta en Apple Wallet o Google Wallet en 5 segundos.'
+              : 'Your customers don’t need to download bulky apps or fill out forms. They save their card into Apple Wallet or Google Wallet in 5 seconds.'}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center bg-zinc-900/50 border border-emerald-500/30 rounded-3xl p-6 sm:p-10 shadow-2xl">
+          <div className="lg:col-span-7 space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-zinc-950/70 p-4 rounded-2xl border border-zinc-800 space-y-1.5">
+                <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>{activeLang === 'es' ? '0 Descargas de Apps' : '0 App Downloads'}</span>
+                </div>
+                <p className="text-xs text-zinc-300 leading-relaxed">
+                  {activeLang === 'es'
+                    ? '+85% de adopción en mostrador frente a solo 15% que logran las apps tradicionales.'
+                    : '+85% checkout adoption vs only 15% achieved by separate custom apps.'}
+                </p>
+              </div>
+
+              <div className="bg-zinc-950/70 p-4 rounded-2xl border border-zinc-800 space-y-1.5">
+                <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                  <Bell className="w-4 h-4 shrink-0" />
+                  <span>{activeLang === 'es' ? 'Alertas de Cercanía' : 'Proximity Push'}</span>
+                </div>
+                <p className="text-xs text-zinc-300 leading-relaxed">
+                  {activeLang === 'es'
+                    ? 'El celular de tus comensales les muestra su tarjeta en pantalla de bloqueo cuando caminan cerca de tu negocio.'
+                    : 'Your diners receive a lock-screen alert reminding them to stop by whenever they walk near your store.'}
+                </p>
+              </div>
+
+              <div className="bg-zinc-950/70 p-4 rounded-2xl border border-zinc-800 space-y-1.5">
+                <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                  <QrCode className="w-4 h-4 shrink-0" />
+                  <span>{activeLang === 'es' ? 'Escaneo en 2 Segundos' : '2-Second Web Scan'}</span>
+                </div>
+                <p className="text-xs text-zinc-300 leading-relaxed">
+                  {activeLang === 'es'
+                    ? 'Tus cajeros o meseros escanean desde cualquier teléfono celular o tablet con PIN, sin comprar terminales caras.'
+                    : 'Staff scans directly using any smartphone camera with a 4-digit PIN. Zero dedicated hardware.'}
+                </p>
+              </div>
+
+              <div className="bg-zinc-950/70 p-4 rounded-2xl border border-zinc-800 space-y-1.5">
+                <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                  <Users className="w-4 h-4 shrink-0" />
+                  <span>{activeLang === 'es' ? 'Tu Propia Base de Datos' : 'Your Own Customer CRM'}</span>
+                </div>
+                <p className="text-xs text-zinc-300 leading-relaxed">
+                  {activeLang === 'es'
+                    ? 'Captura automáticamente nombres, números de celular y visitas para lanzar promociones y campañas de email.'
+                    : 'Automatically capture diner names, mobile phones, and visit counts to drive repeat sales.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <Link
+                href="/aroma-cafe"
+                className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs rounded-xl shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition-all"
+              >
+                <Smartphone className="w-4 h-4" />
+                <span>{activeLang === 'es' ? 'Probar Tarjeta en Vivo (Demo)' : 'Try Live Card Demo'}</span>
+              </Link>
+              <Link
+                href="/scanner"
+                className="px-6 py-3 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white font-bold text-xs rounded-xl border border-zinc-800 flex items-center gap-2 transition-all"
+              >
+                <QrCode className="w-4 h-4 text-emerald-400" />
+                <span>{activeLang === 'es' ? 'Abrir Escáner de Cajero' : 'Open Cashier Scanner'}</span>
+              </Link>
+            </div>
+          </div>
+
+          <div className="lg:col-span-5 flex justify-center">
+            <AppleWalletCard business={demoBusiness} customer={demoCustomer} />
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================= */}
+      {/* 3. PILAR 2: MENÚ DIGITAL (EN SISTEMA O SUBE TU PDF)        */}
+      {/* ========================================================= */}
+      <div id="menu-digital">
+        <DigitalMenuShowcase />
+      </div>
+
+      {/* ========================================================= */}
+      {/* 4. PILAR 3: REVIEWS EN GOOGLE MAPS (FILTRO 5 ESTRELLAS)   */}
+      {/* ========================================================= */}
+      <section id="reviews" className="max-w-6xl mx-auto px-4 sm:px-6 py-20 border-t border-zinc-900">
+        <div className="text-center max-w-3xl mx-auto mb-14">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/25 text-blue-400 text-xs font-bold mb-4">
+            <Star className="w-4 h-4 text-blue-400 fill-current" />
+            <span>{activeLang === 'es' ? 'Pilar 3: Reseñas en Google Maps' : 'Pillar 3: Google Maps Reviews'}</span>
+          </div>
+          <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight">
             {t.googleReviews.headline}{' '}
             <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-amber-300 bg-clip-text text-transparent">
               {t.googleReviews.headlineHighlight}
             </span>
           </h2>
-          <p className="text-sm text-zinc-300 mt-3 max-w-2xl mx-auto leading-relaxed">
+          <p className="mt-4 text-sm sm:text-base text-zinc-300 max-w-2xl mx-auto leading-relaxed">
             {t.googleReviews.subtitle}
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center bg-zinc-900/50 border border-blue-500/30 rounded-3xl p-6 sm:p-10 shadow-2xl">
           {/* Explanation on Left */}
           <div className="lg:col-span-6 space-y-4">
             <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-2xl p-5 space-y-2">
@@ -314,7 +339,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5">
+            <div className="bg-zinc-950/80 border border-zinc-800 rounded-2xl p-5">
               <h4 className="font-bold text-xs text-white uppercase tracking-wider mb-1">
                 ⭐ {t.googleReviews.benefitTitle}
               </h4>
@@ -332,418 +357,19 @@ export default function HomePage() {
       </section>
 
       {/* ========================================================= */}
-      {/* 3.5 REAL-WORLD TESTIMONIALS & RESULTS                     */}
+      {/* 5. TESTIMONIOS REALES DE COMERCIOS                        */}
       {/* ========================================================= */}
       <TestimonialsSection />
 
       {/* ========================================================= */}
-      {/* 4. THE BIG PROBLEM VS THE MODERN SOLUTION                 */}
-      {/* ========================================================= */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-20 border-t border-zinc-900">
-        <div className="text-center max-w-2xl mx-auto mb-14">
-          <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 block mb-1">
-            {t.problem.tag}
-          </span>
-          <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-            {t.problem.headline}
-          </h2>
-          <p className="text-sm text-zinc-400 mt-2">
-            {t.problem.subtitle}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Cardboard Failure */}
-          <div className="bg-zinc-900/40 border border-red-500/20 rounded-3xl p-6 sm:p-8 flex flex-col justify-between">
-            <div>
-              <div className="w-12 h-12 rounded-2xl bg-red-500/10 text-red-400 flex items-center justify-center font-bold text-xl mb-4 border border-red-500/20">
-                📦
-              </div>
-              <h3 className="font-bold text-lg text-white">{t.problem.cardboardTitle}</h3>
-              <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
-                {t.problem.cardboardDesc}
-              </p>
-            </div>
-            <div className="mt-6 pt-4 border-t border-zinc-800/80 text-[11px] font-bold text-red-400 flex items-center gap-1.5">
-              <X className="w-4 h-4 shrink-0" />
-              <span>{t.problem.cardboardFooter}</span>
-            </div>
-          </div>
-
-          {/* Heavy Custom App Failure */}
-          <div className="bg-zinc-900/40 border border-amber-500/20 rounded-3xl p-6 sm:p-8 flex flex-col justify-between">
-            <div>
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold text-xl mb-4 border border-amber-500/20">
-                📲
-              </div>
-              <h3 className="font-bold text-lg text-white">{t.problem.appTitle}</h3>
-              <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
-                {t.problem.appDesc}
-              </p>
-            </div>
-            <div className="mt-6 pt-4 border-t border-zinc-800/80 text-[11px] font-bold text-amber-400 flex items-center gap-1.5">
-              <X className="w-4 h-4 shrink-0" />
-              <span>{t.problem.appFooter}</span>
-            </div>
-          </div>
-
-          {/* The Markethers Solution */}
-          <div className="bg-gradient-to-b from-emerald-500/15 via-zinc-900 to-zinc-900 border border-emerald-500/40 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-xl">
-            <div>
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xl mb-4 border border-emerald-500/30">
-                ⚡
-              </div>
-              <h3 className="font-bold text-lg text-white">{t.problem.solutionTitle}</h3>
-              <p className="text-xs text-zinc-300 mt-2 leading-relaxed">
-                {t.problem.solutionDesc}
-              </p>
-            </div>
-            <div className="mt-6 pt-4 border-t border-emerald-500/20 text-[11px] font-extrabold text-emerald-400 flex items-center gap-1.5">
-              <Check className="w-4 h-4 shrink-0 stroke-[3]" />
-              <span>{t.problem.solutionFooter}</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ========================================================= */}
-      {/* 5. THE 3 CORE MODULES EXPLAINED IN DETAIL                */}
-      {/* ========================================================= */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-20">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 block mb-1">
-            {t.pillars.tag}
-          </span>
-          <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
-            {t.pillars.headline}
-          </h2>
-          <p className="text-sm text-zinc-400 mt-3">
-            {t.pillars.subtitle}
-          </p>
-        </div>
-
-        <div className="space-y-16">
-          {/* PILAR 1: TARJETAS EN WALLET */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center bg-zinc-900/50 border border-zinc-800/80 rounded-3xl p-8 sm:p-12">
-            <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold mb-4">
-                <CreditCard className="w-3.5 h-3.5" />
-                <span>{t.pillars.pillar1Tag}</span>
-              </div>
-              <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                {t.pillars.pillar1Title}
-              </h3>
-              <p className="text-xs sm:text-sm text-zinc-300 mt-3 leading-relaxed">
-                {t.pillars.pillar1Desc}
-              </p>
-
-              <div className="mt-6 space-y-3 text-xs text-zinc-400">
-                <div className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>
-                    <strong>{t.pillars.pillar1Item1Title}</strong> {t.pillars.pillar1Item1Desc}
-                  </span>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>
-                    <strong>{t.pillars.pillar1Item2Title}</strong> {t.pillars.pillar1Item2Desc}
-                  </span>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>
-                    <strong>{t.pillars.pillar1Item3Title}</strong> {t.pillars.pillar1Item3Desc}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-zinc-950 p-6 rounded-3xl border border-zinc-800 text-center">
-              <div className="max-w-xs mx-auto">
-                <AppleWalletCard business={demoBusiness} customer={demoCustomer} />
-              </div>
-            </div>
-          </div>
-
-          {/* PILAR 2: ESCÁNER WEB PARA PERSONAL */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center bg-zinc-900/50 border border-zinc-800/80 rounded-3xl p-8 sm:p-12">
-            <div className="order-2 lg:order-1 bg-zinc-950 p-8 rounded-3xl border border-zinc-800 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto mb-4 border border-emerald-500/20">
-                <QrCode className="w-8 h-8" />
-              </div>
-              <h4 className="text-lg font-bold text-white">{t.pillars.pillar2Tag}</h4>
-              <p className="text-xs text-zinc-400 mt-1 max-w-sm mx-auto">
-                {t.pillars.pillar2Desc}
-              </p>
-              <div className="mt-5 flex justify-center">
-                <Link
-                  href="/scanner"
-                  className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs rounded-xl shadow-lg shadow-emerald-500/20 flex items-center gap-2"
-                >
-                  <Play className="w-3.5 h-3.5 fill-current" />
-                  <span>{t.pillars.pillar2TryScanner}</span>
-                </Link>
-              </div>
-            </div>
-
-            <div className="order-1 lg:order-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-bold mb-4">
-                <QrCode className="w-3.5 h-3.5" />
-                <span>{t.pillars.pillar2Tag}</span>
-              </div>
-              <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                {t.pillars.pillar2Title}
-              </h3>
-              <p className="text-xs sm:text-sm text-zinc-300 mt-3 leading-relaxed">
-                {t.pillars.pillar2Desc}
-              </p>
-
-              <div className="mt-6 space-y-3 text-xs text-zinc-400">
-                <div className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>
-                    <strong>{t.pillars.pillar2Item1Title}</strong> {t.pillars.pillar2Item1Desc}
-                  </span>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>
-                    <strong>{t.pillars.pillar2Item2Title}</strong> {t.pillars.pillar2Item2Desc}
-                  </span>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>
-                    <strong>{t.pillars.pillar2Item3Title}</strong> {t.pillars.pillar2Item3Desc}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ========================================================= */}
-      {/* 6. COMPARISON TABLE: CARTÓN vs APP PROPIA vs MARKETHERS   */}
-      {/* ========================================================= */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-20 border-t border-zinc-900">
-        <div className="text-center max-w-2xl mx-auto mb-14">
-          <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 block mb-1">
-            {t.comparison.tag}
-          </span>
-          <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-            {t.comparison.headline}
-          </h2>
-        </div>
-
-        <div className="bg-zinc-900/60 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-zinc-950/80 text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-800">
-                <tr>
-                  <th className="py-4 px-6 font-bold">{t.comparison.colFeature}</th>
-                  <th className="py-4 px-6 font-bold text-red-400">{t.comparison.colPaper}</th>
-                  <th className="py-4 px-6 font-bold text-amber-400">{t.comparison.colApp}</th>
-                  <th className="py-4 px-6 font-black text-emerald-400 bg-emerald-500/10">
-                    {t.comparison.colMarkethers}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-800/80 text-zinc-300">
-                <tr>
-                  <td className="py-4 px-6 font-bold text-white">{t.comparison.row1Title}</td>
-                  <td className="py-4 px-6 text-zinc-400">{t.comparison.row1Paper}</td>
-                  <td className="py-4 px-6 text-red-400 font-semibold">{t.comparison.row1App}</td>
-                  <td className="py-4 px-6 text-emerald-400 font-black bg-emerald-500/5">
-                    {t.comparison.row1Markethers}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-4 px-6 font-bold text-white">{t.comparison.row2Title}</td>
-                  <td className="py-4 px-6 text-zinc-400">{t.comparison.row2Paper}</td>
-                  <td className="py-4 px-6 text-red-400 font-semibold">{t.comparison.row2App}</td>
-                  <td className="py-4 px-6 text-emerald-400 font-black bg-emerald-500/5">
-                    {t.comparison.row2Markethers}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-4 px-6 font-bold text-white">{t.comparison.row3Title}</td>
-                  <td className="py-4 px-6 text-zinc-400">{t.comparison.row3Paper}</td>
-                  <td className="py-4 px-6 text-zinc-300">{t.comparison.row3App}</td>
-                  <td className="py-4 px-6 text-emerald-400 font-black bg-emerald-500/5">
-                    {t.comparison.row3Markethers}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-4 px-6 font-bold text-white">{t.comparison.row4Title}</td>
-                  <td className="py-4 px-6 text-red-400 font-bold">{t.comparison.row4Paper}</td>
-                  <td className="py-4 px-6 text-zinc-300">{t.comparison.row4App}</td>
-                  <td className="py-4 px-6 text-emerald-400 font-black bg-emerald-500/5">
-                    {t.comparison.row4Markethers}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-4 px-6 font-bold text-white">{t.comparison.row5Title}</td>
-                  <td className="py-4 px-6 text-red-400 font-bold">{t.comparison.row5Paper}</td>
-                  <td className="py-4 px-6 text-zinc-300">{t.comparison.row5App}</td>
-                  <td className="py-4 px-6 text-emerald-400 font-black bg-emerald-500/5">
-                    {t.comparison.row5Markethers}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-4 px-6 font-bold text-white">{t.comparison.row6Title}</td>
-                  <td className="py-4 px-6 text-zinc-400">{t.comparison.row6Paper}</td>
-                  <td className="py-4 px-6 text-red-400 font-semibold">{t.comparison.row6App}</td>
-                  <td className="py-4 px-6 text-emerald-400 font-black bg-emerald-500/5">
-                    {t.comparison.row6Markethers}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      {/* ========================================================= */}
-      {/* 6.5 TRANSPARENT PRICING & GUARANTEE                       */}
+      {/* 6. PLANES & PRECIOS TRANSPARENTES                         */}
       {/* ========================================================= */}
       <PricingSection />
 
       {/* ========================================================= */}
-      {/* 7. INTERACTIVE ROI CALCULATOR                             */}
+      {/* 7. PREGUNTAS FRECUENTES (FAQ)                              */}
       {/* ========================================================= */}
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 py-20 border-t border-zinc-900">
-        <div className="bg-gradient-to-br from-zinc-900 via-zinc-900/90 to-zinc-950 border border-zinc-800 rounded-3xl p-8 sm:p-12 shadow-2xl">
-          <div className="text-center max-w-xl mx-auto mb-10">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 block mb-1">
-              {t.roi.tag}
-            </span>
-            <h2 className="text-3xl font-black text-white tracking-tight">
-              {t.roi.headline}
-            </h2>
-            <p className="text-xs text-zinc-400 mt-2">
-              {t.roi.subtitle}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            {/* Sliders */}
-            <div className="space-y-6">
-              <div>
-                <div className="flex justify-between text-xs font-bold text-zinc-300 mb-2">
-                  <span>{t.roi.sliderClients}</span>
-                  <span className="text-emerald-400 text-sm font-black">{roiCustomersPerDay}</span>
-                </div>
-                <input
-                  type="range"
-                  min="20"
-                  max="300"
-                  step="5"
-                  value={roiCustomersPerDay}
-                  onChange={e => setRoiCustomersPerDay(Number(e.target.value))}
-                  className="w-full accent-emerald-500 cursor-pointer h-2 bg-zinc-800 rounded-lg"
-                />
-              </div>
-
-              <div>
-                <div className="flex justify-between text-xs font-bold text-zinc-300 mb-2">
-                  <span>{t.roi.sliderTicket}</span>
-                  <span className="text-emerald-400 text-sm font-black">${roiAverageTicket}</span>
-                </div>
-                <input
-                  type="range"
-                  min="30"
-                  max="400"
-                  step="5"
-                  value={roiAverageTicket}
-                  onChange={e => setRoiAverageTicket(Number(e.target.value))}
-                  className="w-full accent-emerald-500 cursor-pointer h-2 bg-zinc-800 rounded-lg"
-                />
-              </div>
-
-              <div className="p-4 bg-zinc-950/80 rounded-2xl border border-zinc-800 text-xs text-zinc-400 space-y-1">
-                <span className="font-bold text-white block">{t.roi.baseCalculo}</span>
-                <p>{t.roi.monthlyEst} <strong>${monthlyRevenue.toLocaleString()}</strong></p>
-                <p>{t.roi.avgLift} <strong>+18% ~ +25%</strong></p>
-              </div>
-            </div>
-
-            {/* Results Box */}
-            <div className="bg-zinc-950 p-6 sm:p-8 rounded-3xl border border-emerald-500/30 text-center space-y-5">
-              <span className="text-[11px] uppercase font-bold tracking-wider text-emerald-400 block">
-                {t.roi.extraRevenueBadge}
-              </span>
-              <div className="text-4xl sm:text-5xl font-black text-white">
-                +${estimatedRecovered.toLocaleString()}
-              </div>
-              <p className="text-xs text-zinc-400 max-w-xs mx-auto">
-                {t.roi.extraVisitsNotice}
-              </p>
-
-              <div className="pt-4 border-t border-zinc-800">
-                <Link
-                  href="/app"
-                  className="w-full py-3 bg-[#22c55e] hover:bg-emerald-600 text-black font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
-                >
-                  <span>{t.roi.ctaButton}</span>
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ========================================================= */}
-      {/* 8. USE CASES BY INDUSTRY                                  */}
-      {/* ========================================================= */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-20 border-t border-zinc-900">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 block mb-1">
-            {t.industries.tag}
-          </span>
-          <h2 className="text-3xl font-black text-white tracking-tight">
-            {t.industries.headline}
-          </h2>
-        </div>
-
-        {/* Industry Tabs */}
-        <div className="flex justify-center gap-2 mb-8">
-          {(['cafe', 'barber', 'restaurant'] as const).map(ind => (
-            <button
-              key={ind}
-              onClick={() => setSelectedIndustry(ind)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                selectedIndustry === ind
-                  ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/20'
-                  : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
-              }`}
-            >
-              {industriesData[ind].title.split(',')[0]}
-            </button>
-          ))}
-        </div>
-
-        {/* Selected Industry Card */}
-        <div className="bg-zinc-900/60 border border-zinc-800 rounded-3xl p-8 max-w-3xl mx-auto text-center space-y-4">
-          <span className="text-4xl">{industriesData[selectedIndustry].icon}</span>
-          <h3 className="text-xl font-bold text-white">{industriesData[selectedIndustry].title}</h3>
-          <p className="text-xs sm:text-sm text-zinc-300 max-w-xl mx-auto leading-relaxed">
-            <strong>{t.industries.recommendedMechanic}</strong> {industriesData[selectedIndustry].example}
-          </p>
-          <div className="pt-2">
-            <span className="inline-block px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-black rounded-full border border-emerald-500/20">
-              {industriesData[selectedIndustry].result}
-            </span>
-          </div>
-        </div>
-      </section>
-
-      {/* ========================================================= */}
-      {/* 9. FREQUENTLY ASKED QUESTIONS (FAQ)                       */}
-      {/* ========================================================= */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 py-20 border-t border-zinc-900">
+      <section id="faq" className="max-w-4xl mx-auto px-4 sm:px-6 py-20 border-t border-zinc-900">
         <div className="text-center max-w-2xl mx-auto mb-12">
           <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 block mb-1">
             {t.faq.tag}
@@ -761,7 +387,7 @@ export default function HomePage() {
             >
               <button
                 onClick={() => toggleFaq(idx)}
-                className="w-full p-4 sm:p-5 text-left flex items-center justify-between text-xs sm:text-sm font-bold text-white"
+                className="w-full p-4 sm:p-5 text-left flex items-center justify-between text-xs sm:text-sm font-bold text-white cursor-pointer"
               >
                 <span>{item.q}</span>
                 <ChevronDown
@@ -781,7 +407,7 @@ export default function HomePage() {
       </section>
 
       {/* ========================================================= */}
-      {/* 10. FINAL CALL TO ACTION (CTA)                            */}
+      {/* 8. LLAMADO A LA ACCIÓN FINAL (CTA)                        */}
       {/* ========================================================= */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 py-20">
         <div className="bg-gradient-to-r from-emerald-950 via-zinc-900 to-emerald-950 border border-emerald-500/40 rounded-3xl p-8 sm:p-14 text-center shadow-2xl relative overflow-hidden">
@@ -828,7 +454,7 @@ export default function HomePage() {
           <div className="flex items-center gap-4 text-zinc-400">
             <button
               onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}
-              className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+              className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer"
             >
               <Globe className="w-3.5 h-3.5" />
               <span>{language === 'es' ? 'Switch to English' : 'Cambiar a Español'}</span>
