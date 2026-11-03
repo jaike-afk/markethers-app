@@ -7,6 +7,7 @@ import { GoogleReviewCard } from '@/components/GoogleReviewCard';
 import { DigitalMenuShowcase } from '@/components/DigitalMenuShowcase';
 import { PricingSection } from '@/components/PricingSection';
 import { TestimonialsSection } from '@/components/TestimonialsSection';
+import { MenuBeaconLogo } from '@/components/MenuBeaconLogo';
 import { INITIAL_BUSINESSES, INITIAL_CUSTOMERS } from '@/lib/store';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
@@ -48,9 +49,11 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white selection:bg-emerald-500 selection:text-black overflow-x-hidden relative max-w-full w-full">
-      {/* Background glow lighting effects */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[800px] h-[450px] sm:h-[600px] bg-gradient-to-b from-emerald-500/15 via-teal-600/5 to-transparent blur-3xl pointer-events-none -z-10" />
+    <div className="min-h-screen bg-zinc-950 text-white selection:bg-emerald-500 selection:text-black overflow-x-clip relative max-w-full w-full">
+      {/* Background glow lighting effects - strictly clipped */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10 max-w-full">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[800px] h-[450px] sm:h-[600px] bg-gradient-to-b from-emerald-500/15 via-teal-600/5 to-transparent blur-3xl" />
+      </div>
 
       {/* ========================================================= */}
       {/* 1. HERO SECTION                                           */}
@@ -652,12 +655,10 @@ export default function HomePage() {
       {/* FOOTER */}
       <footer className="border-t border-zinc-900 py-12 text-center text-xs text-zinc-500">
         <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-emerald-500 text-black flex items-center justify-center font-black text-xs">
-              M
-            </div>
-            <span className="font-bold text-white">MenuBeacon</span>
-            <span className="text-[10px] text-zinc-400">— {t.footer.slogan}</span>
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <MenuBeaconLogo height={24} showSubtitle={false} />
+            <span className="text-[11px] text-zinc-600 hidden sm:inline">•</span>
+            <span className="text-[11px] text-zinc-400">{t.footer.slogan}</span>
           </div>
 
           <div className="flex items-center gap-4 text-zinc-400">

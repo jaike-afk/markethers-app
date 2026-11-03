@@ -94,8 +94,10 @@ export function DigitalMenuShowcase() {
 
   return (
     <section className="max-w-6xl mx-auto px-4 sm:px-6 py-20 relative overflow-hidden">
-      {/* Background glow accent */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[600px] h-[350px] bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-transparent blur-3xl pointer-events-none -z-10" />
+      {/* Background glow accent - strictly clipped */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10 max-w-full">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[600px] h-[350px] bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-transparent blur-3xl" />
+      </div>
 
       {/* Header section */}
       <div className="text-center max-w-3xl mx-auto mb-12">

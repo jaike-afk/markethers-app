@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
+import { MenuBeaconLogo } from '@/components/MenuBeaconLogo';
 import {
   Sparkles,
   QrCode,
@@ -39,27 +40,12 @@ export function Navbar() {
   ];
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-zinc-800/80 bg-zinc-950/85 backdrop-blur-xl">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+    <header className="sticky top-0 z-40 w-full max-w-full overflow-x-clip border-b border-zinc-800/80 bg-zinc-950/85 backdrop-blur-xl">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
         {/* Brand */}
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-400 via-teal-400 to-lime-400 flex items-center justify-center text-zinc-950 font-black shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-            <Sparkles className="w-5 h-5 text-zinc-950 fill-zinc-950" />
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-base tracking-tight text-white">
-                MenuBeacon
-              </span>
-            </div>
-            <span
-              className="text-[10px] text-zinc-400 -mt-0.5 block"
-              suppressHydrationWarning
-            >
-              {t.brandSubtitle}
-            </span>
-          </div>
-        </Link>
+        <div className="flex items-center min-w-0 shrink-0">
+          <MenuBeaconLogo height={28} showSubtitle={false} priority />
+        </div>
 
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-1 text-sm font-medium">
@@ -187,19 +173,19 @@ export function Navbar() {
         </div>
 
         {/* Mobile menu toggle & quick lang */}
-        <div className="flex items-center gap-1.5 sm:hidden">
+        <div className="flex items-center gap-1 sm:hidden shrink-0">
           <Link
             href="/login"
-            className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-zinc-900 border border-zinc-800 text-[11px] font-bold text-emerald-400 hover:bg-zinc-800 transition-colors"
+            className="flex items-center gap-1 px-2 py-1 rounded-xl bg-zinc-900 border border-zinc-800 text-[10px] font-bold text-emerald-400 hover:bg-zinc-800 transition-colors shrink-0"
           >
-            <Store className="w-3.5 h-3.5" />
+            <Store className="w-3 h-3" />
             <span>Acceso Dueño</span>
           </Link>
 
-          <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-xl p-0.5 text-xs">
+          <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-xl p-0.5 text-xs shrink-0">
             <button
               onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}
-              className="px-2 py-1 rounded-lg text-xs font-bold text-emerald-400 flex items-center gap-1"
+              className="px-1.5 py-1 rounded-lg text-xs font-bold text-emerald-400 flex items-center gap-0.5"
             >
               <Globe className="w-3 h-3" />
               <span>{language.toUpperCase()}</span>
@@ -208,7 +194,7 @@ export function Navbar() {
 
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-900"
+            className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-900 shrink-0"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>

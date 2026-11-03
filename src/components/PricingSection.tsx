@@ -24,8 +24,10 @@ export function PricingSection() {
 
   return (
     <section id="precios" className="max-w-6xl mx-auto px-4 sm:px-6 py-20 relative overflow-hidden">
-      {/* Background glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[700px] h-[400px] bg-gradient-to-r from-emerald-500/10 via-amber-500/10 to-transparent blur-3xl pointer-events-none -z-10" />
+      {/* Background glow - strictly clipped */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10 max-w-full">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[700px] h-[400px] bg-gradient-to-r from-emerald-500/10 via-amber-500/10 to-transparent blur-3xl" />
+      </div>
 
       {/* Header */}
       <div className="text-center max-w-3xl mx-auto mb-12">

@@ -23,6 +23,7 @@ import {
 import { store } from '@/lib/store';
 import { Business, Customer, MenuItem, StampTransaction, MerchantClientAccount } from '@/types';
 import { validateCreditCard, saveUser } from '@/lib/auth';
+import { MenuBeaconLogo } from '@/components/MenuBeaconLogo';
 
 function RegisterForm() {
   const router = useRouter();
@@ -451,19 +452,7 @@ function RegisterForm() {
       <div className="max-w-6xl mx-auto">
         {/* Brand Header */}
         <div className="flex items-center justify-between pb-8 border-b border-zinc-800">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-400 via-teal-400 to-lime-400 flex items-center justify-center text-zinc-950 font-black shadow-lg shadow-emerald-500/20">
-              <Sparkles className="w-5 h-5 text-zinc-950 fill-zinc-950" />
-            </div>
-            <div>
-              <span className="font-extrabold text-lg tracking-tight text-white block">
-                MenuBeacon
-              </span>
-              <span className="text-[10px] text-zinc-400 -mt-1 block">
-                Un producto de Markethers
-              </span>
-            </div>
-          </Link>
+          <MenuBeaconLogo height={32} showSubtitle={true} priority />
 
           <div className="text-right text-xs">
             <span className="text-zinc-400">¿Ya tienes cuenta?</span>{' '}

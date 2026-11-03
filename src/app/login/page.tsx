@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Sparkles, Mail, Lock, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { authenticateUser } from '@/lib/auth';
+import { MenuBeaconLogo } from '@/components/MenuBeaconLogo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -45,19 +46,9 @@ export default function LoginPage() {
     <div className="min-h-screen bg-zinc-950 text-white font-sans antialiased flex flex-col justify-between py-12 px-4 sm:px-6">
       {/* Brand Header */}
       <div className="max-w-md w-full mx-auto">
-        <Link href="/" className="flex items-center justify-center gap-2.5 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-400 via-teal-400 to-lime-400 flex items-center justify-center text-zinc-950 font-black shadow-lg shadow-emerald-500/20">
-            <Sparkles className="w-6 h-6 text-zinc-950 fill-zinc-950" />
-          </div>
-          <div>
-            <span className="font-extrabold text-xl tracking-tight text-white block">
-              MenuBeacon
-            </span>
-            <span className="text-[10px] text-zinc-400 -mt-1 block">
-              Un producto de Markethers
-            </span>
-          </div>
-        </Link>
+        <div className="flex justify-center mb-8">
+          <MenuBeaconLogo height={36} showSubtitle={true} priority />
+        </div>
 
         {/* Card */}
         <div className="bg-zinc-900/80 border border-zinc-800 rounded-3xl p-8 shadow-2xl space-y-6">
