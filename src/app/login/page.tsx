@@ -51,10 +51,10 @@ export default function LoginPage() {
           </div>
           <div>
             <span className="font-extrabold text-xl tracking-tight text-white block">
-              Markethers
+              MenuBeacon
             </span>
             <span className="text-[10px] text-zinc-400 -mt-1 block">
-              Panel de Control del Negocio
+              Un producto de Markethers
             </span>
           </div>
         </Link>
@@ -137,7 +137,7 @@ export default function LoginPage() {
 
       {/* Footer */}
       <div className="text-center text-xs text-zinc-500">
-        Markethers • Sistema de fidelización y menús digitales sin comisiones
+        MenuBeacon • Un producto de Markethers • Fidelización Wallet & Menú Digital
       </div>
     </div>
   );

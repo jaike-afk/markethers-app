@@ -55,7 +55,7 @@ function RegisterForm() {
 
   const planPricing = {
     starter: { monthly: 29, annual: 19, name: 'Plan Starter' },
-    pro: { monthly: 49, annual: 32, name: 'Plan Pro Markethers' },
+    pro: { monthly: 49, annual: 32, name: 'Plan Pro MenuBeacon' },
     enterprise: { monthly: 99, annual: 65, name: 'Multi-Sucursal' },
   }[selectedPlan];
 
@@ -137,7 +137,7 @@ function RegisterForm() {
       const newBiz: Business = {
         id: `biz_${Date.now()}`,
         slug: slug || 'mi-restaurante',
-        name: businessName || 'Mi Negocio Markethers',
+        name: businessName || 'Mi Negocio MenuBeacon',
         tagline: 'Comida deliciosa & hospitalidad',
         description: 'Menú digital y tarjeta de lealtad en Apple & Google Wallet.',
         category: businessCategory,
@@ -222,7 +222,7 @@ function RegisterForm() {
         type: 'STAMP_ADDED',
         stampsChanged: 1,
         notes: 'Sello de bienvenida por activación de cuenta',
-        staffName: 'Sistema Markethers',
+        staffName: 'Sistema MenuBeacon',
         createdAt: new Date().toISOString(),
       };
 
@@ -457,10 +457,10 @@ function RegisterForm() {
             </div>
             <div>
               <span className="font-extrabold text-lg tracking-tight text-white block">
-                Markethers
+                MenuBeacon
               </span>
               <span className="text-[10px] text-zinc-400 -mt-1 block">
-                Plataforma de Lealtad & Menú Digital
+                Un producto de Markethers
               </span>
             </div>
           </Link>
@@ -479,7 +479,7 @@ function RegisterForm() {
             ✨ Prueba Gratuita de 14 Días • Cancela cuando quieras
           </span>
           <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-            Activa tu cuenta de Markethers en 2 minutos
+            Activa tu cuenta de MenuBeacon en 2 minutos
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 mt-2">
             Configura tu menú digital, activa tus tarjetas de Apple/Google Wallet y recibe tus primeros clientes hoy mismo.

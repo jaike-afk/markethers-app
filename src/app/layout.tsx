@@ -16,9 +16,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Markethers | Plataforma de Fidelización en Apple Wallet & Google Wallet',
+  title: 'MenuBeacon | Plataforma de Fidelización en Apple Wallet & Menú Digital (Un producto de Markethers)',
   description:
-    'Plataforma de lealtad para comercios locales. Tarjetas de sellos digitales en Apple Wallet y Google Wallet, menús digitales y escáner PWA para cajeros sin necesidad de apps.',
+    'MenuBeacon (un producto de Markethers): Fidelización para comercios locales. Tarjetas de sellos en Apple Wallet y Google Wallet, menús digitales con QR y base de clientes sin comisiones.',
 };
 
 export default function RootLayout({

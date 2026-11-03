@@ -108,7 +108,7 @@ export function CounterQrModal({ business, isOpen, onClose, type = 'counter' }: 
             <div className="text-4xl mb-1">{business.logoUrl}</div>
             <h2 className="text-2xl font-black tracking-tight">{business.name}</h2>
             <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider mt-0.5">
-              Markethers Smart QR
+              MenuBeacon Smart QR • Un producto de Markethers
             </p>
           </div>
 

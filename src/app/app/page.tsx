@@ -239,7 +239,7 @@ export default function MarkethersAppPortal() {
   const [isSupportChatOpen, setIsSupportChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<Array<{ sender: 'bot' | 'user'; text: string }>>([
-    { sender: 'bot', text: '¡Hola! Soy tu asistente de Markethers. ¿En qué puedo ayudarte hoy con tu menú, tarjetas Wallet o reseñas?' },
+    { sender: 'bot', text: '¡Hola! Soy tu asistente de MenuBeacon. ¿En qué puedo ayudarte hoy con tu menú, tarjetas Wallet o reseñas?' },
   ]);
 
   // Insight alerts dismissal state
@@ -332,7 +332,7 @@ export default function MarkethersAppPortal() {
   // Subscription & Payment state (Stripe & Gateway)
   const [subscription, setSubscription] = useState({
     planId: 'pro' as 'starter' | 'pro' | 'franchise',
-    planName: 'Plan Pro Markethers',
+    planName: 'Plan Pro MenuBeacon',
     billingCycle: 'annual' as 'monthly' | 'annual',
     price: 32,
     status: 'trialing',
@@ -589,11 +589,11 @@ export default function MarkethersAppPortal() {
         setEmailButtonText('Ver Menú & Abrir Tarjeta');
         setEmailButtonUrl(typeof window !== 'undefined' ? `${window.location.origin}/${business.slug}` : 'https://markethers.app');
       } else {
-        setEmailSenderName('Markethers Management');
+        setEmailSenderName('MenuBeacon (Markethers)');
         setEmailSelectedTemplate('update');
-        setEmailSubject('Nuevas herramientas activadas en tu plataforma Markethers 🚀');
+        setEmailSubject('Nuevas herramientas activadas en tu plataforma MenuBeacon (por Markethers) 🚀');
         setEmailPreheader('Descubre el nuevo sistema de campañas de correo y exportación.');
-        setEmailBody(`Hola {{nombre}},\n\nTe saludamos del equipo de Markethers. Hemos liberado una actualización importante en tu panel de control:\n\n1. Sistema integrado de Campañas de Email para tus comensales.\n2. Exportación directa compatible con Mailchimp, Excel y Google Sheets.\n3. Métricas en vivo y modo soporte técnico.\n\nPuedes entrar a tu cuenta para probarlas hoy mismo.`);
+        setEmailBody(`Hola {{nombre}},\n\nTe saludamos del equipo de MenuBeacon (un producto de Markethers). Hemos liberado una actualización importante en tu panel de control:\n\n1. Sistema integrado de Campañas de Email para tus comensales.\n2. Exportación directa compatible con Mailchimp, Excel y Google Sheets.\n3. Métricas en vivo y modo soporte técnico.\n\nPuedes entrar a tu cuenta para probarlas hoy mismo.`);
         setEmailButtonText('Acceder a mi Panel');
         setEmailButtonUrl('https://markethers.app/app');
       }
@@ -635,18 +635,18 @@ export default function MarkethersAppPortal() {
     } else {
       // merchants context
       if (templateId === 'update') {
-        setEmailSubject('Novedades y mejoras activadas en tu cuenta de Markethers 🚀');
+        setEmailSubject('Novedades y mejoras activadas en tu cuenta de MenuBeacon 🚀');
         setEmailPreheader('Herramientas diseñadas para aumentar la lealtad y el ticket promedio.');
-        setEmailBody(`Estimado(a) {{nombre}},\n\nTe informamos que tu plataforma Markethers cuenta con nuevas herramientas:\n\n- Campañas de email marketing masivo para comensales.\n- Exportación compatible con Excel, Google Sheets y Mailchimp.\n- Tarjetas de Apple & Google Wallet optimizadas.\n\nRevisa tu panel de administración para comenzar a utilizarlas.`);
+        setEmailBody(`Estimado(a) {{nombre}},\n\nTe informamos que tu plataforma MenuBeacon (un producto de Markethers) cuenta con nuevas herramientas:\n\n- Campañas de email marketing masivo para comensales.\n- Exportación compatible con Excel, Google Sheets y Mailchimp.\n- Tarjetas de Apple & Google Wallet optimizadas.\n\nRevisa tu panel de administración para comenzar a utilizarlas.`);
         setEmailButtonText('Entrar a mi Panel');
       } else if (templateId === 'billing') {
         setEmailSubject(`Estado de Cuenta y Notificación de Facturación - {{negocio}}`);
-        setEmailPreheader('Resumen de tu suscripción en Markethers.');
-        setEmailBody(`Hola {{nombre}},\n\nTe saludamos del área administrativa de Markethers. Te recordamos el estado de tu cuenta correspondiente a {{negocio}}:\n\n- Cuota mensual programada.\n- Si requieres comprobante fiscal o asistencia para conciliar tu saldo, responde a este correo y nuestro equipo te atenderá con gusto.`);
+        setEmailPreheader('Resumen de tu suscripción en MenuBeacon.');
+        setEmailBody(`Hola {{nombre}},\n\nTe saludamos del área administrativa de MenuBeacon (Markethers). Te recordamos el estado de tu cuenta correspondiente a {{negocio}}:\n\n- Cuota mensual programada.\n- Si requieres comprobante fiscal o asistencia para conciliar tu saldo, responde a este correo y nuestro equipo te atenderá con gusto.`);
         setEmailButtonText('Ver Estado de Cuenta');
       } else {
         setEmailSubject(`Aviso importante para {{negocio}}`);
-        setEmailPreheader('Comunicado de Markethers.');
+        setEmailPreheader('Comunicado de MenuBeacon.');
         setEmailBody(`Hola {{nombre}},\n\nNos comunicamos respecto a tu cuenta en {{negocio}}...`);
         setEmailButtonText('Ir al Panel');
       }
@@ -890,7 +890,7 @@ export default function MarkethersAppPortal() {
 
     const planNames: Record<string, string> = {
       starter: 'Plan Despegue',
-      pro: 'Plan Pro Markethers',
+      pro: 'Plan Pro MenuBeacon',
       franchise: 'Plan Multi-Sucursal',
     };
     const planPrices: Record<string, number> = {
@@ -910,7 +910,7 @@ export default function MarkethersAppPortal() {
       category: newMerchantCategory,
       status: newMerchantStatus,
       planId: newMerchantPlan,
-      planName: planNames[newMerchantPlan] || 'Plan Pro Markethers',
+      planName: planNames[newMerchantPlan] || 'Plan Pro MenuBeacon',
       billingCycle: 'monthly',
       monthlyPrice: planPrices[newMerchantPlan] || 49,
       totalPaid: parseFloat(newMerchantTotalPaid) || 0,
@@ -929,7 +929,7 @@ export default function MarkethersAppPortal() {
       slug: newClient.businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
       name: newClient.businessName,
       tagline: newClient.category,
-      description: `Comercio gestionado en Markethers - ${newClient.city}`,
+      description: `Comercio gestionado en MenuBeacon - ${newClient.city}`,
       category: newClient.category,
       logoUrl: '🏢',
       coverUrl: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80',
@@ -987,7 +987,7 @@ export default function MarkethersAppPortal() {
         slug: client.businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
         name: client.businessName,
         tagline: client.category,
-        description: `Comercio gestionado en Markethers - ${client.city}`,
+        description: `Comercio gestionado en MenuBeacon - ${client.city}`,
         category: client.category,
         logoUrl: '🏢',
         coverUrl: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80',
@@ -1035,7 +1035,7 @@ export default function MarkethersAppPortal() {
   const handleSelectPlan = (planId: 'starter' | 'pro' | 'franchise') => {
     const planDetails = {
       starter: { name: 'Plan Despegue', priceMonthly: 29, priceAnnual: 19 },
-      pro: { name: 'Plan Pro Markethers', priceMonthly: 49, priceAnnual: 32 },
+      pro: { name: 'Plan Pro MenuBeacon', priceMonthly: 49, priceAnnual: 32 },
       franchise: { name: 'Plan Multi-Sucursal', priceMonthly: 99, priceAnnual: 65 },
     }[planId];
 
@@ -1116,7 +1116,7 @@ Contacto y Soporte: soporte@markethers.com
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Recibo_${receiptId}_Markethers.txt`;
+    link.download = `Recibo_${receiptId}_MenuBeacon.txt`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1643,7 +1643,7 @@ Contacto y Soporte: soporte@markethers.com
         ...prev,
         {
           sender: 'bot',
-          text: 'Gracias por tu consulta. Tu equipo de soporte de Markethers está conectado 24/7 para ayudarte a maximizar tus clientes recurrentes.',
+          text: 'Gracias por tu consulta. Tu equipo de soporte de MenuBeacon (Markethers) está conectado 24/7 para ayudarte a maximizar tus clientes recurrentes.',
         },
       ]);
     }, 700);
@@ -3217,7 +3217,7 @@ Contacto y Soporte: soporte@markethers.com
                 </div>
                 <h3 className="font-black text-lg text-slate-900">Módulo Reservado para el Dueño</h3>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  El libro contable de ventas ejecutivas y auditoría central de cobros es exclusivo para la administración del Propietario de Markethers.
+                  El libro contable de ventas ejecutivas y auditoría central de cobros es exclusivo para la administración del Propietario de MenuBeacon / Markethers.
                 </p>
                 <button
                   type="button"
@@ -4873,7 +4873,7 @@ Contacto y Soporte: soporte@markethers.com
                     Suscripción & Métodos de Pago
                   </h3>
                   <p className="text-xs text-slate-500 mt-1 max-w-xl">
-                    Gestiona tu plan activo de Markethers, actualiza tus tarjetas bancarias y descarga tus comprobantes oficiales de pago.
+                    Gestiona tu plan activo de MenuBeacon, actualiza tus tarjetas bancarias y descarga tus comprobantes oficiales de pago.
                   </p>
                 </div>
 
@@ -5030,7 +5030,7 @@ Contacto y Soporte: soporte@markethers.com
               <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
                 <div>
                   <h4 className="font-black text-lg text-slate-900 tracking-tight">
-                    Cambiar o Mejorar tu Plan de Markethers
+                    Cambiar o Mejorar tu Plan de MenuBeacon
                   </h4>
                   <p className="text-xs text-slate-500 mt-0.5">
                     Elige el plan ideal según el tamaño de tu establecimiento. Los cambios se aplican al instante sin perder ningún dato de clientes o menú.
@@ -5109,7 +5109,7 @@ Contacto y Soporte: soporte@markethers.com
 
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <h5 className="font-black text-base text-slate-900">Plan Pro Markethers</h5>
+                        <h5 className="font-black text-base text-slate-900">Plan Pro MenuBeacon</h5>
                         {subscription.planId === 'pro' && (
                           <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase">
                             Plan Actual
@@ -5724,8 +5724,8 @@ Contacto y Soporte: soporte@markethers.com
                                   <a
                                     href={`https://wa.me/${client.phone.replace(/\D/g, '')}?text=${encodeURIComponent(
                                       client.amountDue > 0
-                                        ? `Hola ${client.ownerName}, te saludamos de Markethers respecto a tu cuenta en ${client.businessName} para coordinar tu saldo pendiente de $${client.amountDue} USD. ¿En qué podemos apoyarte?`
-                                        : `Hola ${client.ownerName}, te saludamos del equipo de Markethers. ¿Cómo podemos apoyarte hoy con tu menú o tarjetas de lealtad en ${client.businessName}?`
+                                        ? `Hola ${client.ownerName}, te saludamos de MenuBeacon respecto a tu cuenta en ${client.businessName} para coordinar tu saldo pendiente de $${client.amountDue} USD. ¿En qué podemos apoyarte?`
+                                        : `Hola ${client.ownerName}, te saludamos del equipo de MenuBeacon. ¿Cómo podemos apoyarte hoy con tu menú o tarjetas de lealtad en ${client.businessName}?`
                                     )}`}
                                     target="_blank"
                                     rel="noreferrer"
@@ -5773,7 +5773,7 @@ Contacto y Soporte: soporte@markethers.com
       <button
         onClick={() => setIsSupportChatOpen(true)}
         className="fixed bottom-6 right-6 z-40 w-12 h-12 bg-[#22c55e] hover:bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-xl shadow-emerald-500/30 transition-transform hover:scale-110 active:scale-95"
-        title="Asistente Markethers"
+        title="Asistente MenuBeacon"
       >
         <MessageCircle className="w-6 h-6 fill-current" />
       </button>
@@ -5791,7 +5791,7 @@ Contacto y Soporte: soporte@markethers.com
                 M
               </div>
               <div>
-                <h4 className="font-bold text-xs">Asistente Markethers</h4>
+                <h4 className="font-bold text-xs">Asistente MenuBeacon</h4>
                 <span className="text-[10px] text-emerald-400">En línea 24/7</span>
               </div>
             </div>
@@ -5849,7 +5849,7 @@ Contacto y Soporte: soporte@markethers.com
 
             <div className="flex items-center gap-2 text-emerald-600 mb-2">
               <Play className="w-5 h-5 fill-current" />
-              <h3 className="font-black text-lg">Tutorial Rápido Markethers</h3>
+              <h3 className="font-black text-lg">Tutorial Rápido MenuBeacon</h3>
             </div>
             <p className="text-xs text-slate-500 mb-6">
               Aprende en 3 pasos cómo fidelizar a tus comensales y multiplicar tus ventas.
@@ -6687,7 +6687,7 @@ Contacto y Soporte: soporte@markethers.com
                     value={editingMerchantBilling.planId}
                     onChange={e => {
                       const pid = e.target.value as any;
-                      const pnames = { starter: 'Plan Despegue', pro: 'Plan Pro Markethers', franchise: 'Plan Multi-Sucursal', enterprise: 'Enterprise' };
+                      const pnames = { starter: 'Plan Despegue', pro: 'Plan Pro MenuBeacon', franchise: 'Plan Multi-Sucursal', enterprise: 'Enterprise' };
                       setEditingMerchantBilling({
                         ...editingMerchantBilling,
                         planId: pid,
@@ -6697,7 +6697,7 @@ Contacto y Soporte: soporte@markethers.com
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none"
                   >
                     <option value="starter">Plan Despegue ($29/m)</option>
-                    <option value="pro">Plan Pro Markethers ($49/m)</option>
+                    <option value="pro">Plan Pro MenuBeacon ($49/m)</option>
                     <option value="franchise">Plan Multi-Sucursal ($99/m)</option>
                   </select>
                 </div>
@@ -6945,7 +6945,7 @@ Contacto y Soporte: soporte@markethers.com
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none"
                   >
                     <option value="starter">Plan Despegue ($29/m)</option>
-                    <option value="pro">Plan Pro Markethers ($49/m)</option>
+                    <option value="pro">Plan Pro MenuBeacon ($49/m)</option>
                     <option value="franchise">Plan Multi-Sucursal ($99/m)</option>
                   </select>
                 </div>
@@ -7593,7 +7593,7 @@ Contacto y Soporte: soporte@markethers.com
 
                       {/* Email Footer */}
                       <div className="pt-3 border-t border-slate-200 text-center text-[10px] text-slate-400 space-y-0.5">
-                        <p>Enviado a través de <strong>Markethers Platform</strong></p>
+                        <p>Enviado a través de <strong>MenuBeacon Platform (un producto de Markethers)</strong></p>
                         <p>{business.address} &bull; {business.city}</p>
                         <p className="text-slate-400 underline cursor-pointer">Cancelar suscripción de promociones</p>
                       </div>
@@ -7768,7 +7768,7 @@ Contacto y Soporte: soporte@markethers.com
               <div>
                 <h3 className="font-black text-lg">Historial de Campañas de Email</h3>
                 <span className="text-xs text-slate-500 block">
-                  Registro de difusiones promocionales y avisos enviados a través de Markethers.
+                  Registro de difusiones promocionales y avisos enviados a través de MenuBeacon.
                 </span>
               </div>
             </div>

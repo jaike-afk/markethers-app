@@ -3,7 +3,7 @@ import { store } from '@/lib/store';
 import { ClientDashboardView } from './ClientDashboardView';
 
 export const metadata = {
-  title: 'Dashboard de Negocio | Markethers Loyalty Platform',
+  title: 'Dashboard de Negocio | MenuBeacon (Un producto de Markethers)',
   description: 'Gestiona tus clientes, diseña tu tarjeta Wallet y revisa analíticas en tiempo real.',
 };
 

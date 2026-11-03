@@ -273,10 +273,10 @@ export interface Translations {
 export const translations: Record<'es' | 'en', Translations> = {
   es: {
     nav: {
-      brandSubtitle: 'Plataforma de Lealtad & Menú Digital',
+      brandSubtitle: 'Un producto de Markethers',
       demoStores: 'Ver Negocios Demo',
       demoStoresTitle: 'Tiendas de Demostración',
-      appPortal: 'Markethers OS (/app)',
+      appPortal: 'MenuBeacon OS (/app)',
       cashierScanner: 'Escáner de Cajero (PWA)',
       merchantPanel: 'Panel de Menú',
       tryCustomerCard: 'Probar Tarjeta Cliente',
@@ -321,7 +321,7 @@ export const translations: Record<'es' | 'en', Translations> = {
       tabPlatform: '⚡ Opción 2: Crearlo en la Plataforma',
       uploadTitle: '¿Ya tienes tu carta impresa o en PDF? Solo súbela.',
       uploadSubtitle:
-        'Cero trabajo manual para ti. Sube tu archivo y Markethers lo digitaliza al instante.',
+        'Cero trabajo manual para ti. Sube tu archivo y MenuBeacon lo digitaliza al instante.',
       uploadStep1Title: '1. Sube tu PDF, Foto o Enlace',
       uploadStep1Desc: 'Toma una foto con tu teléfono a tu carta física, menú en pizarra o arrastra tu PDF.',
       uploadStep2Title: '2. Digitalización Inteligente',
@@ -357,7 +357,7 @@ export const translations: Record<'es' | 'en', Translations> = {
       headline: 'Un Solo Enlace Inteligente para',
       headlineHighlight: 'Instagram y tus Mesas',
       subtitle:
-        'Reemplaza los enlaces genéricos de Linktree. Markethers te da una página ultra rápida que centraliza tu menú en mesa, tarjeta Wallet y reseñas de Google.',
+        'Reemplaza los enlaces genéricos de Linktree. MenuBeacon te da una página ultra rápida que centraliza tu menú en mesa, tarjeta Wallet y reseñas de Google.',
       feature1Title: 'Carta Digital con Fotos & Videos:',
       feature1Desc: 'Tus clientes hojean tu menú interactivo o tu PDF oficial desde su teléfono.',
       feature2Title: 'Pase de Lealtad en 1 Toque:',
@@ -367,10 +367,10 @@ export const translations: Record<'es' | 'en', Translations> = {
       feature4Title: 'Base de Datos de Clientes & CRM:',
       feature4Desc: 'Captura automáticamente el nombre, teléfono y visitas de cada comensal para volver a atraerlos.',
       previewTitle: 'Así ve el cliente tu InfoLink:',
-      previewBioDesc: 'Tu link exclusivo: markethers.com/tu-negocio',
+      previewBioDesc: 'Tu link exclusivo: menubeacon.app/tu-negocio',
     },
     pillars: {
-      tag: 'Los 4 Pilares Markethers',
+      tag: 'Los 4 Pilares MenuBeacon',
       headline: 'Todo lo que tu restaurante necesita en una sola plataforma',
       subtitle: 'Cuatro herramientas esenciales: Fidelización Wallet, Menú Digital, Reseñas Google y Base de Datos de Clientes.',
       pillar1Tag: 'Pilar 1: Fidelización',
@@ -436,18 +436,18 @@ export const translations: Record<'es' | 'en', Translations> = {
       appDesc:
         'Cuesta miles de dólares programarla y mantenerla en las tiendas. Los clientes en caja se niegan a esperar que descargue 80MB con el internet del local.',
       appFooter: 'Costo prohibitivo • 85% de rechazo en fila',
-      solutionTitle: 'Markethers: Apple & Google Wallet',
+      solutionTitle: 'MenuBeacon: Apple & Google Wallet',
       solutionDesc:
         'La tarjeta vive en la app nativa de Wallet que ya viene en el celular de tu cliente. Cero descargas, se activa en 5 segundos y envía notificaciones.',
       solutionFooter: 'Adopción inmediata • 100% de retención • Fácil y amigable',
     },
     comparison: {
       tag: 'Comparativa Transparente',
-      headline: '¿Cómo se compara Markethers frente a otras opciones?',
+      headline: '¿Cómo se compara MenuBeacon frente a otras opciones?',
       colFeature: 'Característica',
       colPaper: 'Tarjetas de Papel',
       colApp: 'App Móvil Dedicada',
-      colMarkethers: 'Markethers OS',
+      colMarkethers: 'MenuBeacon',
       row1Title: 'Descargas requeridas al cliente',
       row1Paper: 'No aplica',
       row1App: 'Obligatoria (App Store 80MB)',
@@ -524,7 +524,7 @@ export const translations: Record<'es' | 'en', Translations> = {
       billedMonthly: 'facturado mes a mes',
       guaranteeTitle: '🛡️ Garantía Blindada de Satisfacción por 14 Días',
       guaranteeDesc:
-        'Prueba Markethers en tu negocio. Si no ves más clientes regresando o no te encanta la experiencia, te devolvemos el 100% de tu dinero sin preguntas ni condiciones ocultas.',
+        'Prueba MenuBeacon en tu negocio. Si no ves más clientes regresando o no te encanta la experiencia, te devolvemos el 100% de tu dinero sin preguntas ni condiciones ocultas.',
       trust1: 'Sin contratos forzosos',
       trust2: 'Cancela en cualquier momento con 1 clic',
       trust3: 'Soporte prioritario para tu equipo',
@@ -548,7 +548,7 @@ export const translations: Record<'es' | 'en', Translations> = {
         },
         {
           id: 'pro',
-          name: 'Plan Pro Markethers',
+          name: 'Plan Pro MenuBeacon',
           badge: '🔥 El Más Elegido (92% de negocios)',
           popular: true,
           description: 'Para comercios que quieren dominar su zona, llenar mesas y blindar su reputación.',
@@ -617,14 +617,14 @@ export const translations: Record<'es' | 'en', Translations> = {
         },
         {
           q: '¿Mis clientes necesitan instalar alguna aplicación para su tarjeta de sellos?',
-          a: 'No. Ese es el superpoder de Markethers. Las tarjetas se añaden de forma 100% nativa a Apple Wallet en iPhone y a Google Wallet en Android. Son las mismas aplicaciones oficiales donde tus clientes ya guardan sus tarjetas de crédito o pases de abordar.',
+          a: 'No. Ese es el superpoder de MenuBeacon. Las tarjetas se añaden de forma 100% nativa a Apple Wallet en iPhone y a Google Wallet en Android. Son las mismas aplicaciones oficiales donde tus clientes ya guardan sus tarjetas de crédito o pases de abordar.',
         },
         {
           q: '¿Qué pasa si un cliente califica con pocas estrellas en el filtro de Google?',
           a: 'Nuestro Filtro Inteligente protege la reputación de tu negocio. Si un cliente da 4 o 5 estrellas, se le invita a publicarlo en Google Maps para subir tu ranking. Si da 1, 2 o 3 estrellas, se abre una ventana de feedback privado que llega directo a la gerencia del negocio para compensarlo y resolver el problema en privado sin dañar tu puntuación pública.',
         },
         {
-          q: '¿Cómo me ayuda Markethers a crear mi propia Base de Datos de Clientes?',
+          q: '¿Cómo me ayuda MenuBeacon a crear mi propia Base de Datos de Clientes?',
           a: 'Cada vez que un cliente guarda su tarjeta de fidelización en Apple Wallet o Google Wallet, el sistema registra de forma automática su nombre, teléfono celular y frecuencia de visitas. Puedes consultar tu base de datos en tiempo real desde tu panel, exportarla a Excel o CSV cuando quieras y comunicarte con tus clientes más fieles.',
         },
         {
@@ -640,21 +640,21 @@ export const translations: Record<'es' | 'en', Translations> = {
     cta: {
       tag: 'Comienza en Minutos',
       headline: 'Convierte comensales de una sola vez en clientes frecuentes de por vida',
-      subtitle: 'Únete a los más de 180 restaurantes, cafeterías y salones que están modernizando su negocio con Markethers.',
+      subtitle: 'Únete a los más de 180 restaurantes, cafeterías y salones que están modernizando su negocio con MenuBeacon (un producto de Markethers).',
       btnPanel: 'Abrir Panel de Control (/app)',
       btnDemo: 'Ver Negocio de Demostración',
     },
     footer: {
       rights: 'Todos los derechos reservados.',
-      slogan: 'El Sistema Operativo de Fidelización, Menú Digital & Reseñas de Google para Negocios Locales.',
+      slogan: 'Un producto de Markethers | Fidelización Wallet & Menú Digital',
     },
   },
   en: {
     nav: {
-      brandSubtitle: 'Loyalty & Digital Menu Platform',
+      brandSubtitle: 'A product of Markethers',
       demoStores: 'Explore Demo Businesses',
       demoStoresTitle: 'Live Demo Stores',
-      appPortal: 'Markethers OS (/app)',
+      appPortal: 'MenuBeacon OS (/app)',
       cashierScanner: 'Cashier Scanner (PWA)',
       merchantPanel: 'Menu Manager',
       tryCustomerCard: 'Try Customer Card',
@@ -699,7 +699,7 @@ export const translations: Record<'es' | 'en', Translations> = {
       tabPlatform: '⚡ Option 2: Build in Platform',
       uploadTitle: 'Already have a printed menu or PDF? Just upload it.',
       uploadSubtitle:
-        'Zero tedious typing for you. Upload your file and Markethers instantly converts it into a digital catalog.',
+        'Zero tedious typing for you. Upload your file and MenuBeacon instantly converts it into a digital catalog.',
       uploadStep1Title: '1. Upload PDF, Photo, or Link',
       uploadStep1Desc: 'Take a quick smartphone snapshot of your paper menu, chalkboard, or drag your PDF file.',
       uploadStep2Title: '2. Smart Instant Digitization',
@@ -735,7 +735,7 @@ export const translations: Record<'es' | 'en', Translations> = {
       headline: 'One Smart Bio Link for',
       headlineHighlight: 'Instagram & Tables',
       subtitle:
-        'Replace generic link-in-bio pages. Markethers gives you an ultra-fast portal that turns social media followers into in-person diners and direct orders.',
+        'Replace generic link-in-bio pages. MenuBeacon gives you an ultra-fast portal that turns social media followers into in-person diners and direct orders.',
       feature1Title: 'Digital Menu with Photos & Videos:',
       feature1Desc: 'Guests browse your interactive items or view your official designed PDF right on their phones.',
       feature2Title: '1-Tap Mobile Wallet Pass:',
@@ -745,10 +745,10 @@ export const translations: Record<'es' | 'en', Translations> = {
       feature4Title: 'Customer Database & CRM:',
       feature4Desc: 'Automatically capture diner names, mobile phone numbers, and visit frequency to drive repeat visits.',
       previewTitle: 'How guests see your InfoLink:',
-      previewBioDesc: 'Your custom link: markethers.com/your-business',
+      previewBioDesc: 'Your custom link: menubeacon.app/your-business',
     },
     pillars: {
-      tag: 'The 4 Markethers Pillars',
+      tag: 'The 4 MenuBeacon Pillars',
       headline: 'Everything your local business needs in one platform',
       subtitle: 'Four essential tools: Wallet Loyalty, Table Digital Menu, Google Reviews, and Proprietary Customer Database.',
       pillar1Tag: 'Pillar 1: Loyalty Cards',
@@ -814,18 +814,18 @@ export const translations: Record<'es' | 'en', Translations> = {
       appDesc:
         'Costs $5,000+ to build and maintain on app stores. Customers standing in line refuse to wait to download an 80MB app over cellular data.',
       appFooter: 'Prohibitive cost • 85% drop-off in line',
-      solutionTitle: 'Markethers: Apple & Google Wallet',
+      solutionTitle: 'MenuBeacon: Apple & Google Wallet',
       solutionDesc:
         'The loyalty card lives in the native Wallet app already installed on their phone. Zero downloads, activated in 5 seconds, and delivers push updates.',
       solutionFooter: 'Instant adoption • 100% retention • Friendly & effortless',
     },
     comparison: {
       tag: 'Transparent Comparison',
-      headline: 'How does Markethers stack up against alternatives?',
+      headline: 'How does MenuBeacon stack up against alternatives?',
       colFeature: 'Feature',
       colPaper: 'Paper Cards',
       colApp: 'Custom App',
-      colMarkethers: 'Markethers OS',
+      colMarkethers: 'MenuBeacon',
       row1Title: 'Customer downloads required',
       row1Paper: 'None',
       row1App: 'Mandatory (App Store 80MB)',
@@ -902,7 +902,7 @@ export const translations: Record<'es' | 'en', Translations> = {
       billedMonthly: 'billed monthly',
       guaranteeTitle: '🛡️ 14-Day Ironclad Satisfaction Guarantee',
       guaranteeDesc:
-        'Try Markethers in your business risk-free. If you do not see more repeat customers or do not love the software, we will refund 100% of your money. No hassle, no questions asked.',
+        'Try MenuBeacon in your business risk-free. If you do not see more repeat customers or do not love the software, we will refund 100% of your money. No hassle, no questions asked.',
       trust1: 'No lock-in contracts',
       trust2: 'Cancel anytime with 1 click',
       trust3: 'Priority direct support for your team',
@@ -926,7 +926,7 @@ export const translations: Record<'es' | 'en', Translations> = {
         },
         {
           id: 'pro',
-          name: 'Pro Markethers Plan',
+          name: 'Pro MenuBeacon Plan',
           badge: '🔥 Most Popular (Chosen by 92% of businesses)',
           popular: true,
           description: 'For growing businesses looking to dominate their area, pack tables, and protect reviews.',
@@ -995,14 +995,14 @@ export const translations: Record<'es' | 'en', Translations> = {
         },
         {
           q: 'Do my customers need to install an app to get their loyalty card?',
-          a: 'No. That is Markethers’ superpower. Cards are saved 100% natively in Apple Wallet on iPhone and Google Wallet on Android. These are the exact official apps where your customers already keep their credit cards and boarding passes.',
+          a: 'No. That is MenuBeacon’s superpower. Cards are saved 100% natively in Apple Wallet on iPhone and Google Wallet on Android. These are the exact official apps where your customers already keep their credit cards and boarding passes.',
         },
         {
           q: 'What happens if a customer gives a low rating in the Google filter?',
           a: 'Our Smart Filter safeguards your public reputation. If a customer awards 4 or 5 stars, they are invited to publish it directly on Google Maps to boost your local ranking. If they select 1, 2, or 3 stars, it opens a private feedback form routed straight to management so you can resolve it privately without hurting your public score.',
         },
         {
-          q: 'How does Markethers help build my own Customer Database?',
+          q: 'How does MenuBeacon help build my own Customer Database?',
           a: 'Every time a guest saves their loyalty card into Apple Wallet or Google Wallet, the platform automatically logs their name, mobile phone number, and visit frequency. You can view your real-time customer database in your dashboard, export it to CSV/Excel anytime, and launch targeted promotions to your most loyal diners.',
         },
         {
@@ -1018,13 +1018,13 @@ export const translations: Record<'es' | 'en', Translations> = {
     cta: {
       tag: 'Get Started in Minutes',
       headline: 'Turn one-time diners into lifelong regulars',
-      subtitle: 'Join over 180 local restaurants, cafes, and salons modernizing their customer experience with Markethers.',
+      subtitle: 'Join over 180 local restaurants, cafes, and salons modernizing their customer experience with MenuBeacon (a product of Markethers).',
       btnPanel: 'Open Control Dashboard (/app)',
       btnDemo: 'Explore Live Demo Store',
     },
     footer: {
       rights: 'All rights reserved.',
-      slogan: 'The Loyalty, Digital Menu & Google Reviews Operating System for Local Businesses.',
+      slogan: 'A product of Markethers | Wallet Loyalty & Digital Menu',
     },
   },
 };

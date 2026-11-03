@@ -152,7 +152,7 @@ export function ClientDashboardView({
                 </span>
               </div>
               <p className="text-xs text-zinc-400">
-                Dashboard de Fidelidad, CRM & Menú Digital Markethers
+                Dashboard de Fidelidad, CRM & Menú Digital MenuBeacon • Un producto de Markethers
               </p>
             </div>
           </div>
