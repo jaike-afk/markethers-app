@@ -47,7 +47,7 @@ export default function LoginPage() {
       {/* Brand Header */}
       <div className="max-w-md w-full mx-auto">
         <div className="flex justify-center mb-8">
-          <MenuBeaconLogo height={36} showSubtitle={true} priority />
+          <MenuBeaconLogo variant="pill" height={44} showSubtitle={true} priority />
         </div>
 
         {/* Card */}

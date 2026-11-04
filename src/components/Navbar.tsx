@@ -43,8 +43,8 @@ export function Navbar() {
     <header className="sticky top-0 z-40 w-full max-w-full overflow-x-clip border-b border-zinc-800/80 bg-zinc-950/85 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
         {/* Brand */}
-        <div className="flex items-center min-w-0 shrink-0">
-          <MenuBeaconLogo height={28} showSubtitle={false} priority />
+        <div className="flex items-center min-w-0 shrink-0 py-1">
+          <MenuBeaconLogo variant="pill" height={36} showSubtitle={false} priority />
         </div>
 
         {/* Desktop Nav */}

@@ -656,7 +656,7 @@ export default function HomePage() {
       <footer className="border-t border-zinc-900 py-12 text-center text-xs text-zinc-500">
         <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex flex-col sm:flex-row items-center gap-3">
-            <MenuBeaconLogo height={24} showSubtitle={false} />
+            <MenuBeaconLogo variant="pill" height={30} showSubtitle={false} />
             <span className="text-[11px] text-zinc-600 hidden sm:inline">•</span>
             <span className="text-[11px] text-zinc-400">{t.footer.slogan}</span>
           </div>

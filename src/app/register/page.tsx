@@ -452,7 +452,7 @@ function RegisterForm() {
       <div className="max-w-6xl mx-auto">
         {/* Brand Header */}
         <div className="flex items-center justify-between pb-8 border-b border-zinc-800">
-          <MenuBeaconLogo height={32} showSubtitle={true} priority />
+          <MenuBeaconLogo variant="pill" height={40} showSubtitle={true} priority />
 
           <div className="text-right text-xs">
             <span className="text-zinc-400">¿Ya tienes cuenta?</span>{' '}
